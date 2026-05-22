@@ -1,0 +1,22 @@
+{
+  "name": "scms-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Strategic Courier Management System monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "workers/*"
+  ],
+  "scripts": {
+    "build": "npm run --workspaces build",
+    "dev:management": "npm run -w @scms/management dev",
+    "dev:courier": "npm run -w @scms/courier dev",
+    "dev:worker": "npm run -w @scms/dispatch-worker dev",
+    "typecheck": "npm run --workspaces typecheck",
+    "test": "npm run --workspaces test"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

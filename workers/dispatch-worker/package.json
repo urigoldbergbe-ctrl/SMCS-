@@ -1,0 +1,22 @@
+{
+  "name": "@scms/dispatch-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo \"No tests for dispatch worker\""
+  },
+  "dependencies": {
+    "@scms/dispatch": "*",
+    "@scms/integration": "*",
+    "@scms/shared": "*",
+    "pino": "^9.5.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+}

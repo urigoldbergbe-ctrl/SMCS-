@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "apps/courier/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "^/api/(.*)$",
+      "dest": "/apps/courier/api/$1"
+    },
+    {
+      "src": "^/(.*)$",
+      "dest": "/apps/courier/$1"
+    }
+  ]
+}

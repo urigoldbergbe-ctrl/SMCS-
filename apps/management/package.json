@@ -11,6 +11,7 @@
     "test": "echo \"No tests for management app\""
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.8",
     "@scms/dispatch": "*",
     "@scms/shared": "*",
     "next": "^14.2.15",

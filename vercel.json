@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "apps/management/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "^/api/(.*)$",
+      "dest": "/apps/management/api/$1"
+    },
+    {
+      "src": "^/(.*)$",
+      "dest": "/apps/management/$1"
+    }
+  ]
+}

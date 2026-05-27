@@ -64,6 +64,17 @@ create table if not exists restaurants (
   is_active boolean not null default true
 );
 
+create table if not exists vip_customers (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null,
+  contact_name text null,
+  contact_phone text null,
+  city text not null,
+  is_active boolean not null default true,
+  assigned_courier_ids uuid[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+
 create table if not exists trips (
   id uuid primary key default uuid_generate_v4(),
   courier_id uuid not null references couriers(id),
@@ -104,11 +115,72 @@ create table if not exists support_tickets (
   resolved_at timestamptz null
 );
 
+create table if not exists manual_orders (
+  id uuid primary key default uuid_generate_v4(),
+  restaurant_name text not null,
+  restaurant_address_full text not null,
+  customer_name text not null,
+  customer_phone text not null,
+  customer_address_full text not null,
+  notes text not null default '',
+  status text not null check (status in ('pending_dispatch', 'assigned', 'picked_up', 'delivered')),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists app_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists simulation_runs (
+  id uuid primary key default uuid_generate_v4(),
+  city text not null,
+  request_payload jsonb not null,
+  result_payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists ai_advisor_logs (
+  id uuid primary key default uuid_generate_v4(),
+  city text not null,
+  intent text not null,
+  prompt text not null,
+  recommendation text not null,
+  rationale jsonb not null,
+  context jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists integration_outbox (
+  id uuid primary key default uuid_generate_v4(),
+  endpoint text not null,
+  payload jsonb not null,
+  status text not null default 'pending' check (status in ('pending', 'sent', 'failed')),
+  attempts integer not null default 0,
+  last_error text null,
+  next_retry_at timestamptz null,
+  created_at timestamptz not null default now(),
+  sent_at timestamptz null
+);
+
+create index if not exists idx_manual_orders_status_created_at on manual_orders(status, created_at desc);
+create index if not exists idx_integration_outbox_status_next_retry on integration_outbox(status, next_retry_at);
+
 -- RLS baseline
 alter table couriers enable row level security;
 alter table courier_locations enable row level security;
 alter table trips enable row level security;
 alter table audit_log enable row level security;
+alter table dispatch_config enable row level security;
+alter table dispatch_config_history enable row level security;
+alter table support_tickets enable row level security;
+alter table manual_orders enable row level security;
+alter table vip_customers enable row level security;
+alter table app_settings enable row level security;
+alter table simulation_runs enable row level security;
+alter table ai_advisor_logs enable row level security;
+alter table integration_outbox enable row level security;
 
 -- Example policy skeletons (replace auth.uid() mapping with your identity strategy)
 drop policy if exists "admin_full_couriers" on couriers;
@@ -121,3 +193,57 @@ drop policy if exists "append_only_audit_log" on audit_log;
 create policy "append_only_audit_log" on audit_log
   for insert
   with check (true);
+
+drop policy if exists "admin_full_dispatch_config" on dispatch_config;
+create policy "admin_full_dispatch_config" on dispatch_config
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "admin_full_dispatch_config_history" on dispatch_config_history;
+create policy "admin_full_dispatch_config_history" on dispatch_config_history
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "admin_full_support_tickets" on support_tickets;
+create policy "admin_full_support_tickets" on support_tickets
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "admin_full_manual_orders" on manual_orders;
+create policy "admin_full_manual_orders" on manual_orders
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "admin_full_vip_customers" on vip_customers;
+create policy "admin_full_vip_customers" on vip_customers
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "admin_full_app_settings" on app_settings;
+create policy "admin_full_app_settings" on app_settings
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "admin_full_simulation_runs" on simulation_runs;
+create policy "admin_full_simulation_runs" on simulation_runs
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "admin_full_ai_advisor_logs" on ai_advisor_logs;
+create policy "admin_full_ai_advisor_logs" on ai_advisor_logs
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "service_full_integration_outbox" on integration_outbox;
+create policy "service_full_integration_outbox" on integration_outbox
+  for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');

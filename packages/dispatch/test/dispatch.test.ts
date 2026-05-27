@@ -21,7 +21,10 @@ const config: DispatchConfig = {
     workloadMaxActiveOrders: 2,
     workloadMaxEtaMinutes: 25,
     proximityMaxEtaMinutes: 15,
-    safeguardTimeoutSeconds: 60
+    safeguardTimeoutSeconds: 60,
+    maxPulledOrders: 2,
+    maxPtodMinutes: 60,
+    noProgressAlertMinutes: 20
   }
 };
 

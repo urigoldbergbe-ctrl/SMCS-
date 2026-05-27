@@ -49,7 +49,10 @@ const dispatchConfigBaseSchema = z.object({
     workloadMaxActiveOrders: z.number().int().positive(),
     workloadMaxEtaMinutes: z.number().positive(),
     proximityMaxEtaMinutes: z.number().positive(),
-    safeguardTimeoutSeconds: z.number().int().positive()
+    safeguardTimeoutSeconds: z.number().int().positive(),
+    maxPulledOrders: z.number().int().positive(),
+    maxPtodMinutes: z.number().positive(),
+    noProgressAlertMinutes: z.number().positive()
   })
 });
 

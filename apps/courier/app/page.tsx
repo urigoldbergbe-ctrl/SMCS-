@@ -111,7 +111,7 @@ export default function CourierHomePage() {
   const [shiftOnline, setShiftOnline] = useState(false);
   const [statusStep, setStatusStep] = useState<"accept" | "arrived" | "onway" | "delivered">("accept");
   const [language, setLanguage] = useState<Language>("he");
-  const [sheetExpanded, setSheetExpanded] = useState(true);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [eventMessages, setEventMessages] = useState<string[]>([]);
   const queuedCount = useMemo(() => getOfflineQueue().length, [status]);
@@ -236,7 +236,7 @@ export default function CourierHomePage() {
           </button>
         </div>
 
-        <section className="top-card">
+        <section className={`top-card ${sheetExpanded ? "top-card-expanded" : "top-card-compact"}`}>
           <div className="online-chip">{shiftOnline ? t.shiftActive : t.shiftOff}</div>
           <p className="delivery-code">{deliveryCode}</p>
           <h1 className="customer-name">{customerName}</h1>

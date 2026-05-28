@@ -111,7 +111,9 @@ export default function CourierHomePage() {
   const [shiftOnline, setShiftOnline] = useState(false);
   const [statusStep, setStatusStep] = useState<"accept" | "arrived" | "onway" | "delivered">("accept");
   const [language, setLanguage] = useState<Language>("he");
+  const [sheetExpanded, setSheetExpanded] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
+  const [eventMessages, setEventMessages] = useState<string[]>([]);
   const queuedCount = useMemo(() => getOfflineQueue().length, [status]);
   const deliveryCode = "4821";
   const customerName = "נועה כהן";
@@ -123,6 +125,18 @@ export default function CourierHomePage() {
     `${pickupAddress} to ${dropoffAddress}`
   )}&output=embed`;
   const t = textByLanguage[language];
+  const statusMessageByStep = {
+    accept: language === "he" ? "התקבלה משימה חדשה - אשר ונווט למסעדה." : "New trip request received. Confirm and head to pickup.",
+    arrived: language === "he" ? "הגעת לנקודת האיסוף. אמת איסוף והמשך ללקוח." : "You arrived at pickup. Confirm pickup and continue to customer.",
+    onway: language === "he" ? "בדרך ללקוח. עקוב אחר המסלול בזמן אמת." : "Heading to customer. Follow live route guidance.",
+    delivered: language === "he" ? "המשלוח הושלם. המתן למשימה הבאה." : "Delivery complete. Waiting for the next job."
+  } as const;
+  const etaByStep = {
+    accept: language === "he" ? "ETA למסעדה: 6 דק׳" : "ETA to pickup: 6 min",
+    arrived: language === "he" ? "ביצוע איסוף" : "Pickup in progress",
+    onway: language === "he" ? "ETA ללקוח: 11 דק׳" : "ETA to dropoff: 11 min",
+    delivered: language === "he" ? "הושלם" : "Completed"
+  } as const;
 
   useEffect(() => {
     const raw = localStorage.getItem(settingsKey);
@@ -151,6 +165,10 @@ export default function CourierHomePage() {
       createdAt: new Date().toISOString()
     });
     setStatus("Problem queued for sync (offline safe).");
+    setEventMessages((current) => [
+      language === "he" ? "דווחה תקלה לתמיכה." : "Issue was reported to support.",
+      ...current
+    ]);
   }
 
   function toggleDashboardLanguage(): void {
@@ -165,6 +183,21 @@ export default function CourierHomePage() {
     }
     localStorage.setItem(settingsKey, JSON.stringify({ language: nextLanguage, appearance }));
     window.location.reload();
+  }
+
+  function updateStatus(next: "accept" | "arrived" | "onway" | "delivered"): void {
+    setStatusStep(next);
+    setEventMessages((current) => [statusMessageByStep[next], ...current].slice(0, 5));
+  }
+
+  function enqueueOperationalIssue(issue: string): void {
+    enqueueOfflineAction({
+      id: crypto.randomUUID(),
+      type: "problem",
+      payload: { issue },
+      createdAt: new Date().toISOString()
+    });
+    setEventMessages((current) => [issue, ...current].slice(0, 5));
   }
 
   return (
@@ -182,24 +215,28 @@ export default function CourierHomePage() {
           <div className="online-chip">{shiftOnline ? t.shiftActive : t.shiftOff}</div>
           <p className="delivery-code">{deliveryCode}</p>
           <h1 className="customer-name">{customerName}</h1>
+          <div className="eta-chip">{etaByStep[statusStep]}</div>
           <div className="status-row">
-            <button className={`status-btn ${statusStep === "accept" ? "active" : ""}`} onClick={() => setStatusStep("accept")}>
+            <button className={`status-btn ${statusStep === "accept" ? "active" : ""}`} onClick={() => updateStatus("accept")}>
               {t.accept}
             </button>
-            <button className={`status-btn ${statusStep === "arrived" ? "active" : ""}`} onClick={() => setStatusStep("arrived")}>
+            <button className={`status-btn ${statusStep === "arrived" ? "active" : ""}`} onClick={() => updateStatus("arrived")}>
               {t.arrived}
             </button>
-            <button className={`status-btn ${statusStep === "onway" ? "active" : ""}`} onClick={() => setStatusStep("onway")}>
+            <button className={`status-btn ${statusStep === "onway" ? "active" : ""}`} onClick={() => updateStatus("onway")}>
               {t.onWay}
             </button>
-            <button className={`status-btn ${statusStep === "delivered" ? "active" : ""}`} onClick={() => setStatusStep("delivered")}>
+            <button className={`status-btn ${statusStep === "delivered" ? "active" : ""}`} onClick={() => updateStatus("delivered")}>
               {t.delivered}
             </button>
           </div>
         </section>
       </div>
 
-      <section className="bottom-sheet">
+      <section className={`bottom-sheet ${sheetExpanded ? "expanded" : "collapsed"}`}>
+        <button className="sheet-handle" onClick={() => setSheetExpanded((current) => !current)} aria-label="Toggle details sheet">
+          <span />
+        </button>
         <button className="primary" onClick={startShift}>
           {shiftOnline ? t.onShift : t.startShift}
         </button>
@@ -242,11 +279,37 @@ export default function CourierHomePage() {
           <a className="secondary" href="/settings">
             {t.settings}
           </a>
+          <button
+            className="secondary"
+            onClick={() =>
+              enqueueOperationalIssue(language === "he" ? "לקוח לא עונה - נדרש עדכון דיספאץ׳" : "Customer not answering - dispatch update needed")
+            }
+          >
+            {language === "he" ? "לקוח לא עונה" : "Customer Not Answering"}
+          </button>
+          <button
+            className="secondary"
+            onClick={() =>
+              enqueueOperationalIssue(language === "he" ? "בעיה באיסוף מהמסעדה" : "Pickup issue at restaurant")
+            }
+          >
+            {language === "he" ? "בעיה באיסוף" : "Pickup Issue"}
+          </button>
         </div>
 
         <p className="muted queue-text">
           {t.offlineQueue}: {queuedCount}
         </p>
+        <p className="muted queue-text">{statusMessageByStep[statusStep]}</p>
+        {eventMessages.length > 0 ? (
+          <div className="event-list">
+            {eventMessages.map((message) => (
+              <div key={message} className="event-item">
+                {message}
+              </div>
+            ))}
+          </div>
+        ) : null}
         {status ? <p className="muted queue-text">{status}</p> : null}
       </section>
     </main>

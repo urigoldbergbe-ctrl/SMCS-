@@ -40,11 +40,13 @@ body {
   position: relative;
   z-index: 5;
   padding: 14px;
+  pointer-events: none;
 }
 
 .lang-toggle-row {
   display: flex;
   margin-bottom: 8px;
+  pointer-events: auto;
 }
 
 .lang-toggle-row.align-left {
@@ -66,11 +68,13 @@ body {
 }
 
 .top-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 12px;
+  padding: 10px;
   box-shadow: 0 8px 24px rgba(27, 42, 65, 0.12);
+  max-width: 82%;
+  pointer-events: auto;
 }
 
 .delivery-code {
@@ -81,7 +85,8 @@ body {
 }
 
 .customer-name {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
+  font-size: 20px;
 }
 
 .online-chip {
@@ -93,6 +98,18 @@ body {
   color: #f9fafb;
   font-size: 12px;
   font-weight: 700;
+}
+
+.eta-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #1f2a44;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
 }
 
 .status-row {
@@ -144,6 +161,31 @@ body {
   padding: 14px 14px 22px;
   display: grid;
   gap: 10px;
+  max-height: 55vh;
+  overflow: auto;
+  transition: max-height 0.2s ease;
+}
+
+.bottom-sheet.collapsed {
+  max-height: 74px;
+  overflow: hidden;
+}
+
+.sheet-handle {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: -4px 0 2px;
+  cursor: pointer;
+}
+
+.sheet-handle span {
+  display: block;
+  width: 44px;
+  height: 5px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: #d1d5db;
 }
 
 .nav-cta {
@@ -243,5 +285,18 @@ body {
 
 .queue-text {
   margin: 0;
+  font-size: 12px;
+}
+
+.event-list {
+  display: grid;
+  gap: 6px;
+}
+
+.event-item {
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 8px 10px;
   font-size: 12px;
 }

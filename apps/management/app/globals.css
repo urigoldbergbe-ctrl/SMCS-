@@ -184,6 +184,12 @@ a {
   padding: 10px 12px;
   background: #ffffff;
   color: var(--text);
+  text-align: right;
+}
+
+label {
+  text-align: right;
+  font-weight: 600;
 }
 
 .textarea {

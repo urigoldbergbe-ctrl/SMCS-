@@ -6,8 +6,8 @@ const restaurantCreateSchema = z.object({
   name: z.string().min(2),
   address: z.string().min(5),
   city: z.string().min(2),
-  priority: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(2),
-  ovCapPercent: z.number().int().min(10).max(40).default(30),
+  priority: z.coerce.number().int().min(1).max(3).default(2),
+  ovCapPercent: z.coerce.number().int().min(10).max(40).default(30),
   eligibleTracks: z.array(z.string().min(1)).default(["A1", "A2", "B"])
 });
 

@@ -70,6 +70,10 @@ export default function RestaurantAssignmentsPage() {
   }
 
   async function addRestaurant(): Promise<void> {
+    if (!restaurantForm.name.trim() || !restaurantForm.address.trim() || !restaurantForm.city.trim()) {
+      setMessage("יש להשלים שם מסעדה, כתובת ועיר.");
+      return;
+    }
     setMessage("שומר מסעדה...");
     const response = await fetch("/api/restaurants", {
       method: "POST",
@@ -80,7 +84,8 @@ export default function RestaurantAssignmentsPage() {
       })
     });
     if (!response.ok) {
-      setMessage("יצירת מסעדה נכשלה. יש להשלים את כל השדות.");
+      const body = (await response.json()) as { error?: string; issues?: unknown };
+      setMessage(`יצירת מסעדה נכשלה: ${body.error ?? "נתונים לא תקינים"}`);
       return;
     }
     setRestaurantForm({

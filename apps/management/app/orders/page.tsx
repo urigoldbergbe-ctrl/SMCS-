@@ -52,7 +52,6 @@ export default function OrdersPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteEstimateResponse | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
-  const [routeValidatedForSubmit, setRouteValidatedForSubmit] = useState(false);
 
   const restaurantMapAddress = useMemo(
     () => (form.restaurantAddressFull.trim() ? form.restaurantAddressFull : "באר שבע"),
@@ -82,11 +81,6 @@ export default function OrdersPage() {
       setMessage("יש למלא את כל השדות לפני שליחה.");
       return;
     }
-    if (!routeValidatedForSubmit) {
-      setMessage("חובה לבצע אימות כתובות וחישוב מסלול לפני שליחת הזמנה.");
-      return;
-    }
-
     setMessage("שולח...");
     const response = await fetch("/api/orders/manual", {
       method: "POST",
@@ -103,11 +97,17 @@ export default function OrdersPage() {
       setMessage("יצירת הזמנה נכשלה. יש לבדוק תקינות נתונים ולנסות שוב.");
       return;
     }
-    setOrders((current) => [body.order as ManualOrderEntry, ...current]);
+    const createdOrder = body.order as ManualOrderEntry;
+    const dispatchResponse = await fetch("/api/orders/manual/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId: createdOrder.id, city })
+    });
+    const orderToInsert = dispatchResponse.ok ? { ...createdOrder, status: "assigned" as const } : createdOrder;
+    setOrders((current) => [orderToInsert, ...current]);
     setForm(initialFormState);
     setRouteInfo(null);
-    setRouteValidatedForSubmit(false);
-    setMessage("ההזמנה נשלחה לתור השיבוץ.");
+    setMessage(dispatchResponse.ok ? "ההזמנה נשלחה ושובצה בהצלחה." : "ההזמנה נשלחה. שיבוץ אוטומטי נכשל, ניתן לשבץ ידנית.");
   }
 
   async function dispatchOrder(orderId: string): Promise<void> {
@@ -128,9 +128,6 @@ export default function OrdersPage() {
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]): void {
     setForm((current) => ({ ...current, [field]: value }));
-    if (field === "restaurantAddressFull" || field === "customerAddressFull") {
-      setRouteValidatedForSubmit(false);
-    }
   }
 
   async function validateAndEstimateRoute(): Promise<void> {
@@ -144,7 +141,6 @@ export default function OrdersPage() {
     }
 
     setRouteLoading(true);
-    setRouteValidatedForSubmit(false);
     const response = await fetch("/api/maps/route-estimate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -156,7 +152,6 @@ export default function OrdersPage() {
     const body = (await response.json()) as RouteEstimateResponse;
     setRouteLoading(false);
     setRouteInfo(body);
-    setRouteValidatedForSubmit(Boolean(body.validated && body.routeEstimate));
   }
 
   return (
@@ -241,12 +236,9 @@ export default function OrdersPage() {
             שליחה לתור שיבוץ
           </button>
           <button className="button" onClick={validateAndEstimateRoute} disabled={routeLoading}>
-            {routeLoading ? "בודק מסלול..." : "אימות כתובות + חישוב מסלול"}
+            {routeLoading ? "בודק מסלול..." : "בדיקת כתובות (אופציונלי)"}
           </button>
           {message ? <p>{message}</p> : null}
-          <p style={{ color: routeValidatedForSubmit ? "var(--success)" : "var(--muted)" }}>
-            {routeValidatedForSubmit ? "האימות הושלם. ניתן לשלוח הזמנה." : "יש לבצע אימות כתובות לפני שליחה."}
-          </p>
           {routeInfo?.warning ? <p style={{ color: "var(--warning)" }}>{routeInfo.warning}</p> : null}
           {routeInfo?.warnings?.length ? (
             <div className="alert-item" style={{ borderColor: "var(--warning)", color: "var(--warning)" }}>

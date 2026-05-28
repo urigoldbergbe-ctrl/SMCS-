@@ -58,11 +58,12 @@ export async function GET(): Promise<NextResponse> {
       .eq("is_active", true)
       .order("name", { ascending: true });
     if (error) {
-      return NextResponse.json({ vipCustomers: [], error: error.message }, { status: 500 });
+      // Degrade gracefully (e.g. table not migrated yet) so the UI stays usable.
+      return NextResponse.json({ vipCustomers: [], warning: error.message }, { status: 200 });
     }
     return NextResponse.json({ vipCustomers: (data ?? []).map((row) => mapVip(row as VipRow)) }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ vipCustomers: [], error: String(error) }, { status: 500 });
+    return NextResponse.json({ vipCustomers: [], warning: String(error) }, { status: 200 });
   }
 }
 

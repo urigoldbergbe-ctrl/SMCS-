@@ -53,11 +53,12 @@ export async function GET(): Promise<NextResponse> {
       .eq("is_active", true)
       .order("name", { ascending: true });
     if (error) {
-      return NextResponse.json({ restaurants: [], error: error.message }, { status: 500 });
+      // Degrade gracefully (e.g. table not migrated yet) so the UI stays usable.
+      return NextResponse.json({ restaurants: [], warning: error.message }, { status: 200 });
     }
     return NextResponse.json({ restaurants: (data ?? []).map((row) => mapRestaurant(row as RestaurantRow)) }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ restaurants: [], error: String(error) }, { status: 500 });
+    return NextResponse.json({ restaurants: [], warning: String(error) }, { status: 200 });
   }
 }
 

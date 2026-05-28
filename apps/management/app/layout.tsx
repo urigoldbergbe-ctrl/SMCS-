@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import SidebarNav from "./sidebar-nav";
+import UiPreferences from "./ui-preferences";
 
 export const metadata: Metadata = {
   title: "מערכת ניהול שליחים אסטרטגית",
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="he" dir="rtl">
       <body>
+        <UiPreferences />
         <div className="layout">
           <aside className="sidebar">
             <div className="brand">

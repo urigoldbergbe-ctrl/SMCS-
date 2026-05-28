@@ -129,10 +129,10 @@ export default function CourierHomePage() {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as { language?: Language };
-      const nextLanguage = parsed.language ?? "he";
+      const nextLanguage = parsed.language === "en" ? "en" : "he";
       setLanguage(nextLanguage);
       document.documentElement.lang = nextLanguage;
-      document.documentElement.dir = nextLanguage === "he" || nextLanguage === "ar" ? "rtl" : "ltr";
+      document.documentElement.dir = nextLanguage === "he" ? "rtl" : "ltr";
     } catch {
       // ignore malformed settings and keep defaults
     }
@@ -164,9 +164,7 @@ export default function CourierHomePage() {
       appearance = "light";
     }
     localStorage.setItem(settingsKey, JSON.stringify({ language: nextLanguage, appearance }));
-    setLanguage(nextLanguage);
-    document.documentElement.lang = nextLanguage;
-    document.documentElement.dir = nextLanguage === "he" ? "rtl" : "ltr";
+    window.location.reload();
   }
 
   return (

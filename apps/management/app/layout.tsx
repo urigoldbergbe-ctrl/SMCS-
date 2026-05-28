@@ -11,19 +11,19 @@ export const metadata: Metadata = {
 };
 
 const navItems = [
-  { label: "דשבורד", href: "/", icon: "◼" },
-  { label: "שליחים", href: "/couriers", icon: "◼" },
-  { label: "שיוך מסעדות", href: "/restaurant-assignments", icon: "◼" },
-  { label: "לקוחות VIP", href: "/vip-customers", icon: "◼" },
-  { label: "הזמנות", href: "/orders", icon: "◼" },
-  { label: "יומן נסיעות", href: "/trip-log", icon: "◼" },
-  { label: "אנליטיקה", href: "/analytics", icon: "◼" },
-  { label: "הגדרות דיספאץ'", href: "/dispatch-config", icon: "◼" },
-  { label: "סימולציה", href: "/simulation", icon: "◼" },
-  { label: "תרגומים", href: "/translations", icon: "◼" },
-  { label: "תור תמיכה", href: "/support-queue", icon: "◼" },
-  { label: "יומן ביקורת", href: "/audit-log", icon: "◼" },
-  { label: "הגדרות", href: "/settings", icon: "◼" }
+  { labelHe: "דשבורד", labelEn: "Dashboard", href: "/", icon: "◼" },
+  { labelHe: "שליחים", labelEn: "Couriers", href: "/couriers", icon: "◼" },
+  { labelHe: "שיוך מסעדות", labelEn: "Restaurant Assignments", href: "/restaurant-assignments", icon: "◼" },
+  { labelHe: "לקוחות VIP", labelEn: "VIP Customers", href: "/vip-customers", icon: "◼" },
+  { labelHe: "הזמנות", labelEn: "Orders", href: "/orders", icon: "◼" },
+  { labelHe: "יומן נסיעות", labelEn: "Trip Log", href: "/trip-log", icon: "◼" },
+  { labelHe: "אנליטיקה", labelEn: "Analytics", href: "/analytics", icon: "◼" },
+  { labelHe: "הגדרות דיספאץ'", labelEn: "Dispatch Config", href: "/dispatch-config", icon: "◼" },
+  { labelHe: "סימולציה", labelEn: "Simulation", href: "/simulation", icon: "◼" },
+  { labelHe: "תרגומים", labelEn: "Translations", href: "/translations", icon: "◼" },
+  { labelHe: "תור תמיכה", labelEn: "Support Queue", href: "/support-queue", icon: "◼" },
+  { labelHe: "יומן ביקורת", labelEn: "Audit Log", href: "/audit-log", icon: "◼" },
+  { labelHe: "הגדרות", labelEn: "Settings", href: "/settings", icon: "◼" }
 ];
 
 export default function RootLayout({ children }: { children: ReactNode }) {

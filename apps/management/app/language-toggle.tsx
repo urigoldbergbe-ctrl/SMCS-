@@ -51,8 +51,8 @@ export default function LanguageToggle(): JSX.Element {
     const nextSettings = { language: nextLanguage, appearance };
     localStorage.setItem(settingsKey, JSON.stringify(nextSettings));
     applyManagementUi(nextLanguage, appearance);
-    setLanguage(nextLanguage);
     window.dispatchEvent(new CustomEvent("management-language-changed", { detail: { language: nextLanguage } }));
+    window.location.reload();
   }
 
   return (

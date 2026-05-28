@@ -21,23 +21,33 @@ export default function RestaurantAssignmentsPage() {
     ovCapPercent: 30
   });
   const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [addingRestaurant, setAddingRestaurant] = useState(false);
 
   async function loadData(): Promise<void> {
-    const [assignmentsRes, restaurantsRes, couriersRes] = await Promise.all([
-      fetch("/api/assignments"),
-      fetch("/api/restaurants"),
-      fetch("/api/couriers")
-    ]);
-    const assignmentsData = (await assignmentsRes.json()) as {
-      assignments?: { restaurants?: RestaurantAssignmentsMap };
-      dictionaries?: { restaurants?: NamedEntity[]; couriers?: NamedEntity[] };
-    };
-    const restaurantsData = (await restaurantsRes.json()) as { restaurants?: Array<NamedEntity & { address: string }> };
-    const couriersData = (await couriersRes.json()) as { couriers?: Array<NamedEntity> };
+    try {
+      setLoading(true);
+      const [assignmentsRes, restaurantsRes, couriersRes] = await Promise.all([
+        fetch("/api/assignments"),
+        fetch("/api/restaurants"),
+        fetch("/api/couriers")
+      ]);
+      const assignmentsData = (await assignmentsRes.json()) as {
+        assignments?: { restaurants?: RestaurantAssignmentsMap };
+        dictionaries?: { restaurants?: NamedEntity[]; couriers?: NamedEntity[] };
+      };
+      const restaurantsData = (await restaurantsRes.json()) as { restaurants?: Array<NamedEntity & { address: string }> };
+      const couriersData = (await couriersRes.json()) as { couriers?: Array<NamedEntity> };
 
-    setAssignments(assignmentsData.assignments?.restaurants ?? {});
-    setRestaurants(assignmentsData.dictionaries?.restaurants ?? restaurantsData.restaurants ?? []);
-    setCouriers(assignmentsData.dictionaries?.couriers ?? couriersData.couriers ?? []);
+      setAssignments(assignmentsData.assignments?.restaurants ?? {});
+      setRestaurants(assignmentsData.dictionaries?.restaurants ?? restaurantsData.restaurants ?? []);
+      setCouriers(assignmentsData.dictionaries?.couriers ?? couriersData.couriers ?? []);
+    } catch {
+      setMessage("טעינת נתוני שיוכים נכשלה.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -55,18 +65,26 @@ export default function RestaurantAssignmentsPage() {
   }
 
   async function save(): Promise<void> {
+    if (saving) return;
+    setSaving(true);
     setMessage("שומר...");
-    const response = await fetch("/api/assignments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assignments: { restaurants: assignments } })
-    });
-    if (!response.ok) {
-      setMessage("שמירת שיוכים נכשלה.");
-      return;
+    try {
+      const response = await fetch("/api/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignments: { restaurants: assignments } })
+      });
+      if (!response.ok) {
+        setMessage("שמירת שיוכים נכשלה.");
+        return;
+      }
+      setMessage("שיוכי המסעדות נשמרו.");
+      await loadData();
+    } catch {
+      setMessage("שמירת שיוכים נכשלה עקב שגיאת רשת.");
+    } finally {
+      setSaving(false);
     }
-    setMessage("שיוכי המסעדות נשמרו.");
-    await loadData();
   }
 
   async function addRestaurant(): Promise<void> {
@@ -74,29 +92,37 @@ export default function RestaurantAssignmentsPage() {
       setMessage("יש להשלים שם מסעדה, כתובת ועיר.");
       return;
     }
+    if (addingRestaurant) return;
+    setAddingRestaurant(true);
     setMessage("שומר מסעדה...");
-    const response = await fetch("/api/restaurants", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...restaurantForm,
-        eligibleTracks: ["A1", "A2", "B"]
-      })
-    });
-    if (!response.ok) {
-      const body = (await response.json()) as { error?: string; issues?: unknown };
-      setMessage(`יצירת מסעדה נכשלה: ${body.error ?? "נתונים לא תקינים"}`);
-      return;
+    try {
+      const response = await fetch("/api/restaurants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...restaurantForm,
+          eligibleTracks: ["A1", "A2", "B"]
+        })
+      });
+      if (!response.ok) {
+        const body = (await response.json()) as { error?: string; issues?: unknown };
+        setMessage(`יצירת מסעדה נכשלה: ${body.error ?? "נתונים לא תקינים"}`);
+        return;
+      }
+      setRestaurantForm({
+        name: "",
+        address: "",
+        city: "באר שבע",
+        priority: 2,
+        ovCapPercent: 30
+      });
+      setMessage("מסעדה נוספה בהצלחה.");
+      await loadData();
+    } catch {
+      setMessage("יצירת מסעדה נכשלה עקב שגיאת רשת.");
+    } finally {
+      setAddingRestaurant(false);
     }
-    setRestaurantForm({
-      name: "",
-      address: "",
-      city: "באר שבע",
-      priority: 2,
-      ovCapPercent: 30
-    });
-    setMessage("מסעדה נוספה בהצלחה.");
-    await loadData();
   }
 
   return (
@@ -126,8 +152,8 @@ export default function RestaurantAssignmentsPage() {
             <option>אשדוד</option>
             <option>תל אביב</option>
           </select>
-          <button className="button" onClick={addRestaurant}>
-            הוספת מסעדה
+          <button className="button" onClick={addRestaurant} disabled={addingRestaurant}>
+            {addingRestaurant ? "מוסיף מסעדה..." : "הוספת מסעדה"}
           </button>
         </div>
       </article>
@@ -138,7 +164,11 @@ export default function RestaurantAssignmentsPage() {
           מעבר לטאב לקוחות VIP
         </a>
         <div className="alert-list" style={{ marginTop: "8px" }}>
-          {restaurants.length === 0 ? <div className="alert-item">אין מסעדות פעילות. הוסף מסעדה כדי להתחיל.</div> : null}
+          {loading ? <div className="alert-item">טוען מסעדות ושיוכים...</div> : null}
+          {!loading && restaurants.length === 0 ? <div className="alert-item">אין מסעדות פעילות. הוסף מסעדה כדי להתחיל.</div> : null}
+          {!loading && restaurants.length > 0 && couriers.length === 0 ? (
+            <div className="alert-item">אין שליחים זמינים לשיוך. יש ליצור שליחים קודם.</div>
+          ) : null}
           {restaurants.map((restaurant) => (
             <div className="alert-item" key={restaurant.id}>
               <strong>{restaurant.name}</strong>
@@ -160,8 +190,8 @@ export default function RestaurantAssignmentsPage() {
             </div>
           ))}
         </div>
-        <button className="button" style={{ marginTop: "10px" }} onClick={save}>
-          שמירת שיוכים
+        <button className="button" style={{ marginTop: "10px" }} onClick={save} disabled={saving || loading}>
+          {saving ? "שומר שיוכים..." : "שמירת שיוכים"}
         </button>
         {message ? <p>{message}</p> : null}
       </article>

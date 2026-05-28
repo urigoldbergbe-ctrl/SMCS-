@@ -25,11 +25,20 @@ export default function CouriersPage() {
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState<string | null>(null);
   const [couriers, setCouriers] = useState<CourierView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   async function loadCouriers(): Promise<void> {
-    const response = await fetch("/api/couriers");
-    const body = (await response.json()) as { couriers?: CourierView[] };
-    setCouriers(body.couriers ?? []);
+    try {
+      setLoading(true);
+      const response = await fetch("/api/couriers");
+      const body = (await response.json()) as { couriers?: CourierView[] };
+      setCouriers(body.couriers ?? []);
+    } catch {
+      setMessage("טעינת רשימת שליחים נכשלה.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -37,28 +46,40 @@ export default function CouriersPage() {
   }, []);
 
   async function createCourier(): Promise<void> {
-    setMessage("שומר שליח...");
-    const response = await fetch("/api/couriers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name,
-        phone: form.phone,
-        city: form.city,
-        vehicleType: "scooter",
-        preferredLanguage: "he"
-      })
-    });
-
-    if (!response.ok) {
-      const body = (await response.json()) as { error?: string };
-      setMessage(`יצירת שליח נכשלה: ${body.error ?? "יש לבדוק שם/טלפון/עיר."}`);
+    if (!form.name.trim() || !form.phone.trim() || !form.city.trim()) {
+      setMessage("יש למלא שם, טלפון ועיר.");
       return;
     }
+    if (submitting) return;
+    setSubmitting(true);
+    setMessage("שומר שליח...");
+    try {
+      const response = await fetch("/api/couriers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          city: form.city,
+          vehicleType: "scooter",
+          preferredLanguage: "he"
+        })
+      });
 
-    setForm(initialForm);
-    setMessage("השליח נשמר בהצלחה.");
-    await loadCouriers();
+      if (!response.ok) {
+        const body = (await response.json()) as { error?: string };
+        setMessage(`יצירת שליח נכשלה: ${body.error ?? "יש לבדוק שם/טלפון/עיר."}`);
+        return;
+      }
+
+      setForm(initialForm);
+      setMessage("השליח נשמר בהצלחה.");
+      await loadCouriers();
+    } catch {
+      setMessage("יצירת שליח נכשלה עקב שגיאת רשת.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -88,8 +109,8 @@ export default function CouriersPage() {
             <option>אשדוד</option>
             <option>תל אביב</option>
           </select>
-          <button className="button" onClick={createCourier}>
-            יצירת שליח ושליחת קישור התחברות
+          <button className="button" onClick={createCourier} disabled={submitting}>
+            {submitting ? "יוצר שליח..." : "יצירת שליח ושליחת קישור התחברות"}
           </button>
           {message ? <p>{message}</p> : null}
         </div>
@@ -98,7 +119,8 @@ export default function CouriersPage() {
         <h3>רשימת שליחים</h3>
         <p>תצוגה חיה ממסד הנתונים: משלוחים ובעיות תפעול.</p>
         <div className="alert-list" style={{ marginTop: "10px" }}>
-          {couriers.length === 0 ? <div className="alert-item">אין שליחים שמורים עדיין.</div> : null}
+          {loading ? <div className="alert-item">טוען שליחים...</div> : null}
+          {!loading && couriers.length === 0 ? <div className="alert-item">אין שליחים שמורים עדיין.</div> : null}
           {couriers.map((courier) => (
             <div key={courier.id} className="alert-item">
               <strong>{courier.name}</strong> | {courier.city} | {courier.phone} | סטטוס: {courier.status} | משלוחים:{" "}

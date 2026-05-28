@@ -21,22 +21,32 @@ export default function VipCustomersPage() {
   const [assignments, setAssignments] = useState<VipAssignmentsMap>({});
   const [form, setForm] = useState({ name: "", city: "באר שבע", contactName: "", contactPhone: "" });
   const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [addingVip, setAddingVip] = useState(false);
 
   async function loadData(): Promise<void> {
-    const [assignmentsRes, vipRes, couriersRes] = await Promise.all([
-      fetch("/api/assignments"),
-      fetch("/api/vip-customers"),
-      fetch("/api/couriers")
-    ]);
-    const assignmentsData = (await assignmentsRes.json()) as {
-      assignments?: { vip?: VipAssignmentsMap };
-      dictionaries?: { couriers?: NamedEntity[] };
-    };
-    const vipData = (await vipRes.json()) as { vipCustomers?: VipEntity[] };
-    const couriersData = (await couriersRes.json()) as { couriers?: NamedEntity[] };
-    setAssignments(assignmentsData.assignments?.vip ?? {});
-    setVipCustomers(vipData.vipCustomers ?? []);
-    setCouriers(assignmentsData.dictionaries?.couriers ?? couriersData.couriers ?? []);
+    try {
+      setLoading(true);
+      const [assignmentsRes, vipRes, couriersRes] = await Promise.all([
+        fetch("/api/assignments"),
+        fetch("/api/vip-customers"),
+        fetch("/api/couriers")
+      ]);
+      const assignmentsData = (await assignmentsRes.json()) as {
+        assignments?: { vip?: VipAssignmentsMap };
+        dictionaries?: { couriers?: NamedEntity[] };
+      };
+      const vipData = (await vipRes.json()) as { vipCustomers?: VipEntity[] };
+      const couriersData = (await couriersRes.json()) as { couriers?: NamedEntity[] };
+      setAssignments(assignmentsData.assignments?.vip ?? {});
+      setVipCustomers(vipData.vipCustomers ?? []);
+      setCouriers(assignmentsData.dictionaries?.couriers ?? couriersData.couriers ?? []);
+    } catch {
+      setMessage("טעינת נתוני VIP נכשלה.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -54,34 +64,55 @@ export default function VipCustomersPage() {
   }
 
   async function save(): Promise<void> {
+    if (saving) return;
+    setSaving(true);
     setMessage("שומר...");
-    const response = await fetch("/api/assignments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assignments: { vip: assignments } })
-    });
-    if (!response.ok) {
-      setMessage("שמירת שיוכי VIP נכשלה.");
-      return;
+    try {
+      const response = await fetch("/api/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignments: { vip: assignments } })
+      });
+      if (!response.ok) {
+        setMessage("שמירת שיוכי VIP נכשלה.");
+        return;
+      }
+      setMessage("שיוכי לקוחות VIP נשמרו.");
+      await loadData();
+    } catch {
+      setMessage("שמירת שיוכי VIP נכשלה עקב שגיאת רשת.");
+    } finally {
+      setSaving(false);
     }
-    setMessage("שיוכי לקוחות VIP נשמרו.");
-    await loadData();
   }
 
   async function addVip(): Promise<void> {
-    setMessage("שומר לקוח VIP...");
-    const response = await fetch("/api/vip-customers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form)
-    });
-    if (!response.ok) {
-      setMessage("יצירת לקוח VIP נכשלה.");
+    if (!form.name.trim() || !form.contactName.trim() || !form.contactPhone.trim()) {
+      setMessage("יש למלא שם לקוח, איש קשר וטלפון.");
       return;
     }
-    setForm({ name: "", city: "באר שבע", contactName: "", contactPhone: "" });
-    setMessage("לקוח VIP נוסף בהצלחה.");
-    await loadData();
+    if (addingVip) return;
+    setAddingVip(true);
+    setMessage("שומר לקוח VIP...");
+    try {
+      const response = await fetch("/api/vip-customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      });
+      if (!response.ok) {
+        const body = (await response.json()) as { error?: string };
+        setMessage(`יצירת לקוח VIP נכשלה: ${body.error ?? "נתונים לא תקינים"}`);
+        return;
+      }
+      setForm({ name: "", city: "באר שבע", contactName: "", contactPhone: "" });
+      setMessage("לקוח VIP נוסף בהצלחה.");
+      await loadData();
+    } catch {
+      setMessage("יצירת לקוח VIP נכשלה עקב שגיאת רשת.");
+    } finally {
+      setAddingVip(false);
+    }
   }
 
   return (
@@ -117,8 +148,8 @@ export default function VipCustomersPage() {
             value={form.contactPhone}
             onChange={(event) => setForm((current) => ({ ...current, contactPhone: event.target.value }))}
           />
-          <button className="button" onClick={addVip}>
-            הוספת לקוח VIP
+          <button className="button" onClick={addVip} disabled={addingVip}>
+            {addingVip ? "מוסיף לקוח VIP..." : "הוספת לקוח VIP"}
           </button>
         </div>
       </article>
@@ -126,7 +157,11 @@ export default function VipCustomersPage() {
         <h3>שיוך שליחים ללקוחות VIP</h3>
         <p>כל לקוח VIP יכול לקבל שליחים ייעודיים עם SLA מחמיר.</p>
         <div className="alert-list" style={{ marginTop: "8px" }}>
-          {vipCustomers.length === 0 ? <div className="alert-item">אין לקוחות VIP. הוסף לקוח חדש כדי להתחיל.</div> : null}
+          {loading ? <div className="alert-item">טוען לקוחות VIP...</div> : null}
+          {!loading && vipCustomers.length === 0 ? <div className="alert-item">אין לקוחות VIP. הוסף לקוח חדש כדי להתחיל.</div> : null}
+          {!loading && vipCustomers.length > 0 && couriers.length === 0 ? (
+            <div className="alert-item">אין שליחים זמינים לשיוך VIP. יש ליצור שליחים קודם.</div>
+          ) : null}
           {vipCustomers.map((vip) => (
             <div key={vip.id} className="alert-item">
               <div>
@@ -147,8 +182,8 @@ export default function VipCustomersPage() {
             </div>
           ))}
         </div>
-        <button className="button" style={{ marginTop: "10px" }} onClick={save}>
-          שמירת שיוכים ל-VIP
+        <button className="button" style={{ marginTop: "10px" }} onClick={save} disabled={saving || loading}>
+          {saving ? "שומר שיוכי VIP..." : "שמירת שיוכים ל-VIP"}
         </button>
         {message ? <p>{message}</p> : null}
       </article>

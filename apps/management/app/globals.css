@@ -207,6 +207,11 @@ label {
   font-weight: 700;
 }
 
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .lang-toggle {
   border-radius: 999px;
   border: 1px solid rgba(255, 128, 0, 0.45);

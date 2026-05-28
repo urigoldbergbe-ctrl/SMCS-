@@ -125,28 +125,53 @@ export default function CourierHomePage() {
     `${pickupAddress} to ${dropoffAddress}`
   )}&output=embed`;
   const t = textByLanguage[language];
-  const statusMessageByStep = {
-    accept: language === "he" ? "התקבלה משימה חדשה - אשר ונווט למסעדה." : "New trip request received. Confirm and head to pickup.",
-    arrived: language === "he" ? "הגעת לנקודת האיסוף. אמת איסוף והמשך ללקוח." : "You arrived at pickup. Confirm pickup and continue to customer.",
-    onway: language === "he" ? "בדרך ללקוח. עקוב אחר המסלול בזמן אמת." : "Heading to customer. Follow live route guidance.",
-    delivered: language === "he" ? "המשלוח הושלם. המתן למשימה הבאה." : "Delivery complete. Waiting for the next job."
-  } as const;
-  const etaByStep = {
-    accept: language === "he" ? "ETA למסעדה: 6 דק׳" : "ETA to pickup: 6 min",
-    arrived: language === "he" ? "ביצוע איסוף" : "Pickup in progress",
-    onway: language === "he" ? "ETA ללקוח: 11 דק׳" : "ETA to dropoff: 11 min",
-    delivered: language === "he" ? "הושלם" : "Completed"
-  } as const;
+  const statusMessageByLanguage: Record<Language, Record<"accept" | "arrived" | "onway" | "delivered", string>> = {
+    he: {
+      accept: "התקבלה משימה חדשה - אשר ונווט למסעדה.",
+      arrived: "הגעת לנקודת האיסוף. אמת איסוף והמשך ללקוח.",
+      onway: "בדרך ללקוח. עקוב אחר המסלול בזמן אמת.",
+      delivered: "המשלוח הושלם. המתן למשימה הבאה."
+    },
+    en: {
+      accept: "New trip request received. Confirm and head to pickup.",
+      arrived: "You arrived at pickup. Confirm pickup and continue to customer.",
+      onway: "Heading to customer. Follow live route guidance.",
+      delivered: "Delivery complete. Waiting for the next job."
+    },
+    ru: {
+      accept: "Получен новый заказ. Подтвердите и направляйтесь к ресторану.",
+      arrived: "Вы прибыли в точку забора. Подтвердите получение и выезжайте к клиенту.",
+      onway: "Вы в пути к клиенту. Следуйте маршруту в реальном времени.",
+      delivered: "Доставка завершена. Ожидание следующего заказа."
+    },
+    ar: {
+      accept: "تم استلام مهمة جديدة. أكد الطلب وتوجه إلى المطعم.",
+      arrived: "وصلت إلى نقطة الاستلام. أكد الاستلام وتابع إلى العميل.",
+      onway: "أنت في الطريق إلى العميل. اتبع المسار المباشر.",
+      delivered: "اكتمل التسليم. بانتظار المهمة التالية."
+    }
+  };
+  const etaByLanguage: Record<Language, Record<"accept" | "arrived" | "onway" | "delivered", string>> = {
+    he: { accept: "ETA למסעדה: 6 דק׳", arrived: "ביצוע איסוף", onway: "ETA ללקוח: 11 דק׳", delivered: "הושלם" },
+    en: { accept: "ETA to pickup: 6 min", arrived: "Pickup in progress", onway: "ETA to dropoff: 11 min", delivered: "Completed" },
+    ru: { accept: "ETA до ресторана: 6 мин", arrived: "Получение заказа", onway: "ETA до клиента: 11 мин", delivered: "Завершено" },
+    ar: { accept: "وقت الوصول للمطعم: 6 د", arrived: "جاري الاستلام", onway: "وقت الوصول للعميل: 11 د", delivered: "مكتمل" }
+  };
+  const statusMessageByStep = statusMessageByLanguage[language];
+  const etaByStep = etaByLanguage[language];
 
   useEffect(() => {
     const raw = localStorage.getItem(settingsKey);
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as { language?: Language };
-      const nextLanguage = parsed.language === "en" ? "en" : "he";
+      const nextLanguage: Language =
+        parsed.language === "he" || parsed.language === "en" || parsed.language === "ru" || parsed.language === "ar"
+          ? parsed.language
+          : "he";
       setLanguage(nextLanguage);
       document.documentElement.lang = nextLanguage;
-      document.documentElement.dir = nextLanguage === "he" ? "rtl" : "ltr";
+      document.documentElement.dir = nextLanguage === "he" || nextLanguage === "ar" ? "rtl" : "ltr";
     } catch {
       // ignore malformed settings and keep defaults
     }

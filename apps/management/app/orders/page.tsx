@@ -52,6 +52,9 @@ export default function OrdersPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteEstimateResponse | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [dispatchingOrderId, setDispatchingOrderId] = useState<string | null>(null);
 
   const restaurantMapAddress = useMemo(
     () => (form.restaurantAddressFull.trim() ? form.restaurantAddressFull : "באר שבע"),
@@ -62,12 +65,21 @@ export default function OrdersPage() {
     [form.customerAddressFull]
   );
 
-  useEffect(() => {
-    void (async () => {
+  async function loadOrders(): Promise<void> {
+    try {
+      setOrdersLoading(true);
       const response = await fetch("/api/orders/manual");
       const body = (await response.json()) as { orders?: ManualOrderEntry[] };
       setOrders(body.orders ?? []);
-    })();
+    } catch {
+      setMessage("טעינת ההזמנות נכשלה.");
+    } finally {
+      setOrdersLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadOrders();
   }, []);
 
   async function submitOrder(): Promise<void> {
@@ -81,49 +93,65 @@ export default function OrdersPage() {
       setMessage("יש למלא את כל השדות לפני שליחה.");
       return;
     }
+    if (submitting) return;
+    setSubmitting(true);
     setMessage("שולח...");
-    const response = await fetch("/api/orders/manual", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: crypto.randomUUID(),
-        ...form,
-        status: "pending_dispatch",
-        createdAt: new Date().toISOString()
-      })
-    });
-    const body = await response.json();
-    if (!response.ok) {
-      setMessage("יצירת הזמנה נכשלה. יש לבדוק תקינות נתונים ולנסות שוב.");
-      return;
+    try {
+      const response = await fetch("/api/orders/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: crypto.randomUUID(),
+          ...form,
+          status: "pending_dispatch",
+          createdAt: new Date().toISOString()
+        })
+      });
+      const body = (await response.json()) as { error?: string; order?: ManualOrderEntry };
+      if (!response.ok || !body.order) {
+        setMessage(`יצירת הזמנה נכשלה: ${body.error ?? "יש לבדוק תקינות נתונים ולנסות שוב."}`);
+        return;
+      }
+      const createdOrder = body.order;
+      const dispatchResponse = await fetch("/api/orders/manual/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: createdOrder.id, city })
+      });
+      const orderToInsert = dispatchResponse.ok ? { ...createdOrder, status: "assigned" as const } : createdOrder;
+      setOrders((current) => [orderToInsert, ...current]);
+      setForm(initialFormState);
+      setRouteInfo(null);
+      setMessage(dispatchResponse.ok ? "ההזמנה נשלחה ושובצה בהצלחה." : "ההזמנה נשלחה. שיבוץ אוטומטי נכשל, ניתן לשבץ ידנית.");
+    } catch {
+      setMessage("שליחת ההזמנה נכשלה. נסה שוב.");
+    } finally {
+      setSubmitting(false);
     }
-    const createdOrder = body.order as ManualOrderEntry;
-    const dispatchResponse = await fetch("/api/orders/manual/dispatch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId: createdOrder.id, city })
-    });
-    const orderToInsert = dispatchResponse.ok ? { ...createdOrder, status: "assigned" as const } : createdOrder;
-    setOrders((current) => [orderToInsert, ...current]);
-    setForm(initialFormState);
-    setRouteInfo(null);
-    setMessage(dispatchResponse.ok ? "ההזמנה נשלחה ושובצה בהצלחה." : "ההזמנה נשלחה. שיבוץ אוטומטי נכשל, ניתן לשבץ ידנית.");
   }
 
   async function dispatchOrder(orderId: string): Promise<void> {
+    if (dispatchingOrderId) return;
+    setDispatchingOrderId(orderId);
     setMessage("מריץ שיבוץ הזמנה...");
-    const response = await fetch("/api/orders/manual/dispatch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, city })
-    });
-    const body = await response.json();
-    if (!response.ok) {
-      setMessage(`שיבוץ נכשל: ${body.error ?? "unknown error"}`);
-      return;
+    try {
+      const response = await fetch("/api/orders/manual/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, city })
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setMessage(`שיבוץ נכשל: ${body.error ?? "unknown error"}`);
+        return;
+      }
+      setMessage("השיבוץ בוצע בהצלחה.");
+      setOrders((current) => current.map((row) => (row.id === orderId ? { ...row, status: "assigned" } : row)));
+    } catch {
+      setMessage("שיבוץ נכשל עקב שגיאת רשת.");
+    } finally {
+      setDispatchingOrderId(null);
     }
-    setMessage("השיבוץ בוצע בהצלחה.");
-    setOrders((current) => current.map((row) => (row.id === orderId ? { ...row, status: "assigned" } : row)));
   }
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]): void {
@@ -141,17 +169,26 @@ export default function OrdersPage() {
     }
 
     setRouteLoading(true);
-    const response = await fetch("/api/maps/route-estimate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        originAddress: form.restaurantAddressFull,
-        destinationAddress: form.customerAddressFull
-      })
-    });
-    const body = (await response.json()) as RouteEstimateResponse;
-    setRouteLoading(false);
-    setRouteInfo(body);
+    try {
+      const response = await fetch("/api/maps/route-estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originAddress: form.restaurantAddressFull,
+          destinationAddress: form.customerAddressFull
+        })
+      });
+      const body = (await response.json()) as RouteEstimateResponse;
+      setRouteInfo(body);
+    } catch {
+      setRouteInfo({
+        validated: false,
+        warnings: ["בדיקת מסלול נכשלה. יש לנסות שוב."],
+        routeEstimate: null
+      });
+    } finally {
+      setRouteLoading(false);
+    }
   }
 
   return (
@@ -232,8 +269,8 @@ export default function OrdersPage() {
             value={form.notes}
             onChange={(event) => updateField("notes", event.target.value)}
           />
-          <button className="button" onClick={submitOrder}>
-            שליחה לתור שיבוץ
+          <button className="button" onClick={submitOrder} disabled={submitting}>
+            {submitting ? "שולח..." : "שליחה לתור שיבוץ"}
           </button>
           <button className="button" onClick={validateAndEstimateRoute} disabled={routeLoading}>
             {routeLoading ? "בודק מסלול..." : "בדיקת כתובות (אופציונלי)"}
@@ -262,7 +299,8 @@ export default function OrdersPage() {
       </article>
       <article className="card">
         <h3>תור הזמנות ידניות</h3>
-        {orders.length === 0 ? <p>עדיין לא נשלחו הזמנות ידניות.</p> : null}
+        {ordersLoading ? <p>טוען הזמנות...</p> : null}
+        {!ordersLoading && orders.length === 0 ? <p>עדיין לא נשלחו הזמנות ידניות.</p> : null}
         {orders.map((order) => (
           <div key={order.id} className="alert-item">
             <strong>{order.restaurantName}</strong> - {order.customerName} ({order.customerPhone})
@@ -278,8 +316,13 @@ export default function OrdersPage() {
               </a>
             </div>
             {order.status === "pending_dispatch" ? (
-              <button className="button" style={{ marginTop: "8px" }} onClick={() => dispatchOrder(order.id)}>
-                שיבוץ עכשיו
+              <button
+                className="button"
+                style={{ marginTop: "8px" }}
+                onClick={() => dispatchOrder(order.id)}
+                disabled={dispatchingOrderId === order.id}
+              >
+                {dispatchingOrderId === order.id ? "משבץ..." : "שיבוץ עכשיו"}
               </button>
             ) : null}
             {order.notes ? <div style={{ color: "var(--muted)" }}>הערות: {order.notes}</div> : null}

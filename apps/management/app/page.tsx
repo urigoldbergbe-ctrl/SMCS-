@@ -80,16 +80,30 @@ const textByLanguage: Record<
 export default function DashboardPage() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot>(defaultSnapshot);
   const [language, setLanguage] = useState<Language>("he");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const t = textByLanguage[language];
 
-  useEffect(() => {
-    void (async () => {
+  async function loadDashboard(): Promise<void> {
+    try {
+      setLoading(true);
+      setError(null);
       const response = await fetch("/api/dashboard");
-      if (!response.ok) return;
+      if (!response.ok) {
+        setError(language === "he" ? "טעינת הדשבורד נכשלה." : "Failed to load dashboard data.");
+        return;
+      }
       const body = (await response.json()) as DashboardSnapshot;
       setSnapshot(body);
-    })();
+    } catch {
+      setError(language === "he" ? "טעינת הדשבורד נכשלה." : "Failed to load dashboard data.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
+  useEffect(() => {
+    void loadDashboard();
     const applyFromStorage = (): void => {
       const raw = localStorage.getItem("management_ui_settings");
       if (!raw) return;
@@ -132,11 +146,11 @@ export default function DashboardPage() {
         </article>
         <article className="card kpi">
           <h3>{t.pending}</h3>
-          <p>{snapshot.pendingAssignment}</p>
+          <p>{loading ? "-" : snapshot.pendingAssignment}</p>
         </article>
         <article className="card kpi">
           <h3>{t.onRun}</h3>
-          <p>{snapshot.couriersOnRun}</p>
+          <p>{loading ? "-" : snapshot.couriersOnRun}</p>
         </article>
 
         <article className="card wide">
@@ -150,6 +164,9 @@ export default function DashboardPage() {
             loading="lazy"
           />
           <div style={{ marginTop: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button className="button" onClick={loadDashboard}>
+              {language === "he" ? "רענון נתונים" : "Refresh Data"}
+            </button>
             <a
               className="button"
               href="/simulation?city=beer_sheva&fleetSize=12&datasetType=what_if"
@@ -166,6 +183,7 @@ export default function DashboardPage() {
         <article className="card feed">
           <h3>{t.alerts}</h3>
           <div className="alert-list">
+            {error ? <div className="alert-item" style={{ borderColor: "var(--danger)", color: "var(--danger)" }}>{error}</div> : null}
             {snapshot.highPtodOrders.length === 0 && snapshot.noProgressOrders.length === 0 ? (
               <div className="alert-item">{t.noAlerts}</div>
             ) : null}

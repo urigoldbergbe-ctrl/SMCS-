@@ -68,12 +68,13 @@ body {
 }
 
 .top-card {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 10px;
   box-shadow: 0 8px 24px rgba(27, 42, 65, 0.12);
-  max-width: 82%;
+  max-width: 76%;
   pointer-events: auto;
 }
 
@@ -266,6 +267,7 @@ body {
   background: var(--accent);
   font-weight: 700;
   font-size: 16px;
+  cursor: pointer;
 }
 
 .secondary {
@@ -276,6 +278,14 @@ body {
   color: var(--text);
   background: #ffffff;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.primary:disabled,
+.secondary:disabled,
+.status-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .muted {

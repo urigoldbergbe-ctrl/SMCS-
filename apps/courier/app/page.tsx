@@ -29,6 +29,8 @@ const textByLanguage: Record<
     offlineQueue: string;
     mapMax: string;
     mapNormal: string;
+    deliveryNotes: string;
+    route: string;
   }
 > = {
   he: {
@@ -50,7 +52,9 @@ const textByLanguage: Record<
     settings: "הגדרות אפליקציה",
     offlineQueue: "פעולות אופליין בתור",
     mapMax: "מצב מפה מלאה",
-    mapNormal: "חזרה לתצוגה מלאה"
+    mapNormal: "חזרה לתצוגה מלאה",
+    deliveryNotes: "הערות להזמנה",
+    route: "מסלול"
   },
   en: {
     accept: "Accept Order",
@@ -71,7 +75,9 @@ const textByLanguage: Record<
     settings: "App Settings",
     offlineQueue: "Offline queued actions",
     mapMax: "Max Map Mode",
-    mapNormal: "Exit Max Map"
+    mapNormal: "Exit Max Map",
+    deliveryNotes: "Order notes",
+    route: "Route"
   },
   ru: {
     accept: "Принять заказ",
@@ -92,7 +98,9 @@ const textByLanguage: Record<
     settings: "Настройки приложения",
     offlineQueue: "Действий офлайн в очереди",
     mapMax: "Режим полной карты",
-    mapNormal: "Выйти из режима карты"
+    mapNormal: "Выйти из режима карты",
+    deliveryNotes: "Примечания к заказу",
+    route: "Маршрут"
   },
   ar: {
     accept: "قبول الطلب",
@@ -113,7 +121,9 @@ const textByLanguage: Record<
     settings: "إعدادات التطبيق",
     offlineQueue: "إجراءات أوفلاين في الطابور",
     mapMax: "وضع خريطة كاملة",
-    mapNormal: "عودة للوضع الكامل"
+    mapNormal: "عودة للوضع الكامل",
+    deliveryNotes: "ملاحظات الطلب",
+    route: "المسار"
   }
 };
 
@@ -131,6 +141,10 @@ export default function CourierHomePage() {
   const pickupAddress = "דרך חברון 12, באר שבע";
   const dropoffAddress = "רחוב ירושלים 54, באר שבע";
   const nextJob = "משלוח 4833 - Burger Hub -> רגר 7";
+  // Order comments captured at order entry (management `notes` field).
+  const orderNotes = "קומה 3, דירה 9. להשאיר ליד הדלת ולהתקשר בהגעה.";
+  // Comments become relevant once the courier is heading to / has reached the destination.
+  const destinationReached = statusStep === "onway" || statusStep === "delivered";
   const wazeUrl = "https://waze.com/ul?ll=31.252973,34.791462&navigate=yes";
   const mapEmbed = `https://www.google.com/maps?q=${encodeURIComponent(
     `${pickupAddress} to ${dropoffAddress}`
@@ -257,6 +271,26 @@ export default function CourierHomePage() {
             {language === "he" ? "EN" : "HE"}
           </button>
         </div>
+
+        <section className="route-banner">
+          <div className="route-line">
+            <span className="dot pickup-dot" />
+            <span className="route-label">{t.pickup}:</span>
+            <span className="route-value">{pickupAddress}</span>
+          </div>
+          <div className="route-line">
+            <span className="dot dropoff-dot" />
+            <span className="route-label">{t.dropoff}:</span>
+            <span className="route-value">{dropoffAddress}</span>
+          </div>
+        </section>
+
+        {destinationReached && orderNotes ? (
+          <section className="destination-notes">
+            <div className="destination-notes-title">{t.deliveryNotes}</div>
+            <div className="destination-notes-body">{orderNotes}</div>
+          </section>
+        ) : null}
 
         {!mapMaxMode ? (
           <section className={`top-card ${sheetExpanded ? "top-card-expanded" : "top-card-compact"}`}>

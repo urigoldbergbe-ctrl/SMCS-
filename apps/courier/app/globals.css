@@ -86,6 +86,68 @@ body {
   cursor: pointer;
 }
 
+.route-banner {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  display: grid;
+  gap: 4px;
+  pointer-events: auto;
+  box-shadow: 0 6px 18px rgba(27, 42, 65, 0.12);
+}
+
+.route-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.route-line .dot {
+  margin-top: 0;
+  flex: 0 0 auto;
+}
+
+.route-label {
+  font-weight: 700;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.route-value {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.destination-notes {
+  background: #fff7ed;
+  border: 1px solid #f59e0b;
+  border-radius: 14px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  pointer-events: auto;
+  box-shadow: 0 6px 18px rgba(27, 42, 65, 0.12);
+}
+
+.destination-notes-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #92400e;
+  margin-bottom: 2px;
+}
+
+.destination-notes-body {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1b2a41;
+}
+
 .top-card {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(4px);

@@ -51,7 +51,8 @@ export default function CouriersPage() {
     });
 
     if (!response.ok) {
-      setMessage("יצירת שליח נכשלה. יש לבדוק שם/טלפון/עיר.");
+      const body = (await response.json()) as { error?: string };
+      setMessage(`יצירת שליח נכשלה: ${body.error ?? "יש לבדוק שם/טלפון/עיר."}`);
       return;
     }
 

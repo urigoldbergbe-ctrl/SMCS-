@@ -1,49 +1,92 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useMessages } from "../lib/i18n";
+
+type VipStatus = "half_time" | "one_full" | "two_full";
+
+interface VipCustomer {
+  id: string;
+  name: string;
+  city: string;
+  code: string;
+  street: string;
+  streetNumber: string;
+  specialDirections: string;
+  zone: string;
+  vipStatus: VipStatus;
+  contactName: string;
+  contactPhone: string;
+  assignedCourierIds: string[];
+}
 
 interface NamedEntity {
   id: string;
   name: string;
 }
 
-interface VipEntity extends NamedEntity {
-  city: string;
-  contactName: string;
-  contactPhone: string;
-}
+type AssignmentsMap = Record<string, string[]>;
 
-type VipAssignmentsMap = Record<string, string[]>;
+const requiredCouriersByStatus: Record<VipStatus, number> = {
+  half_time: 1,
+  one_full: 1,
+  two_full: 2
+};
+
+const emptyForm = {
+  name: "",
+  code: "",
+  city: "",
+  street: "",
+  streetNumber: "",
+  specialDirections: "",
+  zone: "",
+  vipStatus: "one_full" as VipStatus,
+  contactName: "",
+  contactPhone: ""
+};
 
 export default function VipCustomersPage() {
-  const [vipCustomers, setVipCustomers] = useState<VipEntity[]>([]);
+  const { language, t } = useMessages();
+  const [vipCustomers, setVipCustomers] = useState<VipCustomer[]>([]);
   const [couriers, setCouriers] = useState<NamedEntity[]>([]);
-  const [assignments, setAssignments] = useState<VipAssignmentsMap>({});
-  const [form, setForm] = useState({ name: "", city: "באר שבע", contactName: "", contactPhone: "" });
+  const [assignments, setAssignments] = useState<AssignmentsMap>({});
+  const [form, setForm] = useState(emptyForm);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [addingVip, setAddingVip] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<string>("");
+
+  function vipStatusLabel(status: VipStatus): string {
+    if (status === "half_time") return t.vip_half;
+    if (status === "two_full") return t.vip_two;
+    return t.vip_one;
+  }
 
   async function loadData(): Promise<void> {
     try {
       setLoading(true);
-      const [assignmentsRes, vipRes, couriersRes] = await Promise.all([
-        fetch("/api/assignments"),
+      const [vipRes, assignmentsRes, couriersRes] = await Promise.all([
         fetch("/api/vip-customers"),
+        fetch("/api/assignments"),
         fetch("/api/couriers")
       ]);
+      const vipData = (await vipRes.json()) as { vipCustomers?: VipCustomer[] };
       const assignmentsData = (await assignmentsRes.json()) as {
-        assignments?: { vip?: VipAssignmentsMap };
+        assignments?: { vip?: AssignmentsMap };
         dictionaries?: { couriers?: NamedEntity[] };
       };
-      const vipData = (await vipRes.json()) as { vipCustomers?: VipEntity[] };
       const couriersData = (await couriersRes.json()) as { couriers?: NamedEntity[] };
-      setAssignments(assignmentsData.assignments?.vip ?? {});
-      setVipCustomers(vipData.vipCustomers ?? []);
+      const list = vipData.vipCustomers ?? [];
+      setVipCustomers(list);
+      const fromList: AssignmentsMap = {};
+      for (const vip of list) fromList[vip.id] = vip.assignedCourierIds ?? [];
+      setAssignments({ ...fromList, ...(assignmentsData.assignments?.vip ?? {}) });
       setCouriers(assignmentsData.dictionaries?.couriers ?? couriersData.couriers ?? []);
+      setLastRefreshed(new Date().toLocaleString());
     } catch {
-      setMessage("טעינת נתוני VIP נכשלה.");
+      setMessage(language === "he" ? "טעינת הנתונים נכשלה." : "Failed to load data.");
     } finally {
       setLoading(false);
     }
@@ -53,20 +96,20 @@ export default function VipCustomersPage() {
     void loadData();
   }, []);
 
-  function toggle(vipName: string, courier: string): void {
+  function toggle(vipId: string, courierId: string): void {
     setAssignments((current) => {
-      const assigned = current[vipName] ?? [];
-      const next = assigned.includes(courier)
-        ? assigned.filter((entry) => entry !== courier)
-        : [...assigned, courier];
-      return { ...current, [vipName]: next };
+      const assigned = current[vipId] ?? [];
+      const next = assigned.includes(courierId)
+        ? assigned.filter((entry) => entry !== courierId)
+        : [...assigned, courierId];
+      return { ...current, [vipId]: next };
     });
   }
 
   async function save(): Promise<void> {
     if (saving) return;
     setSaving(true);
-    setMessage("שומר...");
+    setMessage(t.saving);
     try {
       const response = await fetch("/api/assignments", {
         method: "POST",
@@ -74,26 +117,26 @@ export default function VipCustomersPage() {
         body: JSON.stringify({ assignments: { vip: assignments } })
       });
       if (!response.ok) {
-        setMessage("שמירת שיוכי VIP נכשלה.");
+        setMessage(language === "he" ? "שמירת שיוכים נכשלה." : "Failed to save assignments.");
         return;
       }
-      setMessage("שיוכי לקוחות VIP נשמרו.");
+      setMessage(language === "he" ? "השיוכים נשמרו." : "Assignments saved.");
       await loadData();
     } catch {
-      setMessage("שמירת שיוכי VIP נכשלה עקב שגיאת רשת.");
+      setMessage(language === "he" ? "שמירת שיוכים נכשלה." : "Failed to save assignments.");
     } finally {
       setSaving(false);
     }
   }
 
   async function addVip(): Promise<void> {
-    if (!form.name.trim() || !form.contactName.trim() || !form.contactPhone.trim()) {
-      setMessage("יש למלא שם לקוח, איש קשר וטלפון.");
+    if (!form.name.trim() || !form.city.trim() || !form.street.trim() || !form.streetNumber.trim()) {
+      setMessage(language === "he" ? "יש למלא שם, עיר, רחוב ומספר." : "Name, city, street and number are required.");
       return;
     }
-    if (addingVip) return;
-    setAddingVip(true);
-    setMessage("שומר לקוח VIP...");
+    if (adding) return;
+    setAdding(true);
+    setMessage(t.saving);
     try {
       const response = await fetch("/api/vip-customers", {
         method: "POST",
@@ -102,72 +145,89 @@ export default function VipCustomersPage() {
       });
       if (!response.ok) {
         const body = (await response.json()) as { error?: string };
-        setMessage(`יצירת לקוח VIP נכשלה: ${body.error ?? "נתונים לא תקינים"}`);
+        setMessage(`${language === "he" ? "יצירת לקוח VIP נכשלה" : "Failed to create VIP"}: ${body.error ?? ""}`);
         return;
       }
-      setForm({ name: "", city: "באר שבע", contactName: "", contactPhone: "" });
-      setMessage("לקוח VIP נוסף בהצלחה.");
+      setForm(emptyForm);
+      setMessage(language === "he" ? "לקוח VIP נוסף." : "VIP customer added.");
       await loadData();
     } catch {
-      setMessage("יצירת לקוח VIP נכשלה עקב שגיאת רשת.");
+      setMessage(language === "he" ? "יצירת לקוח VIP נכשלה." : "Failed to create VIP customer.");
     } finally {
-      setAddingVip(false);
+      setAdding(false);
     }
   }
 
+  const complianceRows = useMemo(
+    () =>
+      vipCustomers.map((vip) => {
+        const assignedCount = (assignments[vip.id] ?? []).length;
+        const required = requiredCouriersByStatus[vip.vipStatus];
+        return { vip, assignedCount, required, compliant: assignedCount >= required };
+      }),
+    [vipCustomers, assignments]
+  );
+
   return (
     <section className="stack">
-      <h1>לקוחות VIP</h1>
+      <h1>{t.vip_title}</h1>
+
       <article className="card">
-        <h3>הוספת לקוח VIP</h3>
-        <div className="form-row">
-          <input
-            className="input"
-            placeholder="שם לקוח"
-            value={form.name}
-            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-          />
-          <select
-            className="select"
-            value={form.city}
-            onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))}
-          >
-            <option>באר שבע</option>
-            <option>אשדוד</option>
-            <option>תל אביב</option>
+        <h3 className="section-title">{t.vip_add}</h3>
+        <div className="form-grid">
+          <input className="input" placeholder={t.vip_name} value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} />
+          <input className="input" placeholder={t.restaurants_code} value={form.code} onChange={(e) => setForm((c) => ({ ...c, code: e.target.value }))} />
+          <input className="input" placeholder={t.city} value={form.city} onChange={(e) => setForm((c) => ({ ...c, city: e.target.value }))} />
+          <input className="input" placeholder={t.restaurants_street} value={form.street} onChange={(e) => setForm((c) => ({ ...c, street: e.target.value }))} />
+          <input className="input" placeholder={t.restaurants_number} value={form.streetNumber} onChange={(e) => setForm((c) => ({ ...c, streetNumber: e.target.value }))} />
+          <input className="input" placeholder={t.restaurants_zone} value={form.zone} onChange={(e) => setForm((c) => ({ ...c, zone: e.target.value }))} />
+          <select className="select" value={form.vipStatus} onChange={(e) => setForm((c) => ({ ...c, vipStatus: e.target.value as VipStatus }))}>
+            <option value="half_time">{t.vip_half}</option>
+            <option value="one_full">{t.vip_one}</option>
+            <option value="two_full">{t.vip_two}</option>
           </select>
-          <input
-            className="input"
-            placeholder="איש קשר"
-            value={form.contactName}
-            onChange={(event) => setForm((current) => ({ ...current, contactName: event.target.value }))}
-          />
-          <input
-            className="input"
-            placeholder="טלפון איש קשר"
-            value={form.contactPhone}
-            onChange={(event) => setForm((current) => ({ ...current, contactPhone: event.target.value }))}
-          />
-          <button className="button" onClick={addVip} disabled={addingVip}>
-            {addingVip ? "מוסיף לקוח VIP..." : "הוספת לקוח VIP"}
-          </button>
+          <input className="input" placeholder={t.vip_contact} value={form.contactName} onChange={(e) => setForm((c) => ({ ...c, contactName: e.target.value }))} />
+          <input className="input" placeholder={t.vip_contact_phone} value={form.contactPhone} onChange={(e) => setForm((c) => ({ ...c, contactPhone: e.target.value }))} />
+          <input className="input" placeholder={t.restaurants_directions} value={form.specialDirections} onChange={(e) => setForm((c) => ({ ...c, specialDirections: e.target.value }))} />
+        </div>
+        <button className="button" style={{ marginTop: "10px" }} onClick={addVip} disabled={adding}>
+          {adding ? t.saving : t.add}
+        </button>
+      </article>
+
+      <article className="card">
+        <h3 className="section-title">{t.restaurants_compliance}</h3>
+        <p className="muted-text">
+          {language === "he" ? "מתעדכן אוטומטית" : "Auto-updated"}
+          {lastRefreshed ? ` · ${lastRefreshed}` : ""}
+        </p>
+        <div className="alert-list">
+          {loading ? <div className="alert-item">{t.loading}</div> : null}
+          {!loading && complianceRows.length === 0 ? <div className="alert-item">—</div> : null}
+          {complianceRows.map(({ vip, assignedCount, required, compliant }) => (
+            <div key={vip.id} className={`alert-item ${compliant ? "" : "row-alert"}`}>
+              <div>
+                {compliant ? "" : <span className="alert-icon">⚠ </span>}
+                <strong>{vip.name}</strong>
+                {vip.code ? ` · ${vip.code}` : ""} · {vip.city}
+              </div>
+              <div className="muted-text">
+                {t.restaurants_vip_status}: {vipStatusLabel(vip.vipStatus)} · {t.restaurants_required}: {required} · {t.restaurants_assigned}: {assignedCount}
+                {compliant ? "" : ` · ${t.restaurants_alert}`}
+              </div>
+            </div>
+          ))}
         </div>
       </article>
+
       <article className="card">
-        <h3>שיוך שליחים ללקוחות VIP</h3>
-        <p>כל לקוח VIP יכול לקבל שליחים ייעודיים עם SLA מחמיר.</p>
-        <div className="alert-list" style={{ marginTop: "8px" }}>
-          {loading ? <div className="alert-item">טוען לקוחות VIP...</div> : null}
-          {!loading && vipCustomers.length === 0 ? <div className="alert-item">אין לקוחות VIP. הוסף לקוח חדש כדי להתחיל.</div> : null}
-          {!loading && vipCustomers.length > 0 && couriers.length === 0 ? (
-            <div className="alert-item">אין שליחים זמינים לשיוך VIP. יש ליצור שליחים קודם.</div>
-          ) : null}
+        <h3 className="section-title">{t.restaurants_matrix}</h3>
+        <div className="alert-list">
           {vipCustomers.map((vip) => (
-            <div key={vip.id} className="alert-item">
-              <div>
-                <strong>{vip.name}</strong> | עיר: {vip.city} | איש קשר: {vip.contactName || "לא הוגדר"}
-              </div>
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "6px" }}>
+            <div className="alert-item" key={vip.id}>
+              <strong>{vip.name}</strong>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "6px" }}>
+                {couriers.length === 0 ? <span className="muted-text">—</span> : null}
                 {couriers.map((courier) => (
                   <label key={`${vip.id}-${courier.id}`} style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
                     <input
@@ -183,7 +243,7 @@ export default function VipCustomersPage() {
           ))}
         </div>
         <button className="button" style={{ marginTop: "10px" }} onClick={save} disabled={saving || loading}>
-          {saving ? "שומר שיוכי VIP..." : "שמירת שיוכים ל-VIP"}
+          {saving ? t.saving : t.save}
         </button>
         {message ? <p>{message}</p> : null}
       </article>

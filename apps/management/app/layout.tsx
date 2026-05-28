@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: "פלטפורמת ניהול ותפעול SCMS"
 };
 
+const courierAppUrl = process.env.NEXT_PUBLIC_COURIER_APP_URL ?? "/c";
+
 const navItems = [
   { labelHe: "דשבורד", labelEn: "Dashboard", href: "/", icon: "◼" },
   { labelHe: "שליחים", labelEn: "Couriers", href: "/couriers", icon: "◼" },
@@ -17,13 +19,11 @@ const navItems = [
   { labelHe: "לקוחות VIP", labelEn: "VIP Customers", href: "/vip-customers", icon: "◼" },
   { labelHe: "הזמנות", labelEn: "Orders", href: "/orders", icon: "◼" },
   { labelHe: "יומן נסיעות", labelEn: "Trip Log", href: "/trip-log", icon: "◼" },
-  { labelHe: "אנליטיקה", labelEn: "Analytics", href: "/analytics", icon: "◼" },
   { labelHe: "הגדרות דיספאץ'", labelEn: "Dispatch Config", href: "/dispatch-config", icon: "◼" },
-  { labelHe: "סימולציה", labelEn: "Simulation", href: "/simulation", icon: "◼" },
-  { labelHe: "תרגומים", labelEn: "Translations", href: "/translations", icon: "◼" },
   { labelHe: "תור תמיכה", labelEn: "Support Queue", href: "/support-queue", icon: "◼" },
   { labelHe: "יומן ביקורת", labelEn: "Audit Log", href: "/audit-log", icon: "◼" },
-  { labelHe: "הגדרות", labelEn: "Settings", href: "/settings", icon: "◼" }
+  { labelHe: "הגדרות", labelEn: "Settings", href: "/settings", icon: "◼" },
+  { labelHe: "פתח אפליקציית שליחים", labelEn: "Open Courier App", href: courierAppUrl, icon: "◼", external: true }
 ];
 
 export default function RootLayout({ children }: { children: ReactNode }) {

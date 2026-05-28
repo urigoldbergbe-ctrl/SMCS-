@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMessages } from "../lib/i18n";
 
 type Language = "he" | "en" | "ru" | "ar";
 type Appearance = "light" | "dark";
@@ -31,6 +32,7 @@ function applyManagementUi(language: Language, appearance: Appearance): void {
 }
 
 export default function SettingsPage() {
+  const { t } = useMessages();
   const [mode, setMode] = useState("integrated");
   const [language, setLanguage] = useState<Language>("he");
   const [appearance, setAppearance] = useState<Appearance>("light");
@@ -75,28 +77,28 @@ export default function SettingsPage() {
 
   return (
     <section className="stack">
-      <h1>הגדרות</h1>
+      <h1>{t.settings_title}</h1>
       <article className="card">
-        <label>מצב תפעול</label>
+        <label>{t.settings_mode}</label>
         <select className="select" value={mode} onChange={(event) => setMode(event.target.value)}>
           <option value="integrated">אינטגרטיבי</option>
           <option value="standalone">עצמאי</option>
           <option value="simulation">סימולציה</option>
         </select>
-        <label>שפה</label>
+        <label>{t.settings_language}</label>
         <select className="select" value={language} onChange={(event) => setLanguage(event.target.value as Language)}>
           <option value="he">עברית</option>
           <option value="en">English</option>
           <option value="ru">Русский</option>
           <option value="ar">العربية</option>
         </select>
-        <label>תצוגה</label>
+        <label>{t.settings_appearance}</label>
         <select className="select" value={appearance} onChange={(event) => setAppearance(event.target.value as Appearance)}>
           <option value="light">בהיר</option>
           <option value="dark">כהה</option>
         </select>
         <button className="button" onClick={saveMode} disabled={saving}>
-          {saving ? "שומר..." : "שמירה"}
+          {saving ? t.saving : t.save}
         </button>
         {saved ? <p>{saved}</p> : null}
       </article>

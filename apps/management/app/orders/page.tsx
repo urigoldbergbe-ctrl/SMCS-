@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ManualOrderEntry } from "@scms/shared";
+import { useMessages } from "../lib/i18n";
 
 interface FormState {
   restaurantName: string;
@@ -46,6 +47,7 @@ function buildMapLink(address: string): string {
 }
 
 export default function OrdersPage() {
+  const { t } = useMessages();
   const [city, setCity] = useState("beer_sheva");
   const [form, setForm] = useState<FormState>(initialFormState);
   const [orders, setOrders] = useState<ManualOrderEntry[]>([]);
@@ -193,7 +195,7 @@ export default function OrdersPage() {
 
   return (
     <section className="stack">
-      <h1>הזמנות במצב עצמאי</h1>
+      <h1>{t.orders_title}</h1>
       <article className="card">
         <h3>הזנת הזמנה ידנית</h3>
         <div className="form-row">

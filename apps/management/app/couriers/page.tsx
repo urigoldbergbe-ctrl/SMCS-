@@ -1,6 +1,7 @@
- "use client";
+"use client";
 
 import { useEffect, useState } from "react";
+import { useMessages } from "../lib/i18n";
 
 interface CourierView {
   id: string;
@@ -22,6 +23,7 @@ const initialForm = {
 };
 
 export default function CouriersPage() {
+  const { t } = useMessages();
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState<string | null>(null);
   const [couriers, setCouriers] = useState<CourierView[]>([]);
@@ -84,9 +86,9 @@ export default function CouriersPage() {
 
   return (
     <section className="stack">
-      <h1>שליחים</h1>
+      <h1>{t.couriers_title}</h1>
       <article className="card">
-        <h3>הוספת שליח</h3>
+        <h3 className="section-title">{t.couriers_add}</h3>
         <div className="form-row">
           <input
             className="input"
@@ -116,8 +118,7 @@ export default function CouriersPage() {
         </div>
       </article>
       <article className="card">
-        <h3>רשימת שליחים</h3>
-        <p>תצוגה חיה ממסד הנתונים: משלוחים ובעיות תפעול.</p>
+        <h3 className="section-title">{t.couriers_list}</h3>
         <div className="alert-list" style={{ marginTop: "10px" }}>
           {loading ? <div className="alert-item">טוען שליחים...</div> : null}
           {!loading && couriers.length === 0 ? <div className="alert-item">אין שליחים שמורים עדיין.</div> : null}

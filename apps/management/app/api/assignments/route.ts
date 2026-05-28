@@ -65,38 +65,44 @@ export async function POST(request: Request) {
     };
     const supabase = getSupabaseAdminClient();
 
-    const restaurantAssignments = body.assignments?.restaurants ?? {};
-    const vipAssignments = body.assignments?.vip ?? {};
+    const restaurantAssignments = body.assignments?.restaurants;
+    const vipAssignments = body.assignments?.vip;
 
-    const { data: couriers, error: couriersError } = await supabase
-      .from("couriers")
-      .select("id")
-      .eq("is_active", true);
-    if (couriersError) {
-      return NextResponse.json({ ok: false, error: couriersError.message }, { status: 500 });
-    }
-
-    const courierIds = (couriers ?? []).map((row) => row.id);
-    for (const courierId of courierIds) {
-      const assignedRestaurantIds = Object.entries(restaurantAssignments)
-        .filter(([, assignedCourierIds]) => assignedCourierIds.includes(courierId))
-        .map(([restaurantId]) => restaurantId);
-      const { error: updateError } = await supabase
+    // Only rewrite the courier->restaurant mapping when restaurant assignments are submitted.
+    if (restaurantAssignments) {
+      const { data: couriers, error: couriersError } = await supabase
         .from("couriers")
-        .update({ assigned_restaurant_ids: assignedRestaurantIds })
-        .eq("id", courierId);
-      if (updateError) {
-        return NextResponse.json({ ok: false, error: updateError.message }, { status: 500 });
+        .select("id")
+        .eq("is_active", true);
+      if (couriersError) {
+        return NextResponse.json({ ok: false, error: couriersError.message }, { status: 500 });
+      }
+
+      const courierIds = (couriers ?? []).map((row) => row.id);
+      for (const courierId of courierIds) {
+        const assignedRestaurantIds = Object.entries(restaurantAssignments)
+          .filter(([, assignedCourierIds]) => assignedCourierIds.includes(courierId))
+          .map(([restaurantId]) => restaurantId);
+        const { error: updateError } = await supabase
+          .from("couriers")
+          .update({ assigned_restaurant_ids: assignedRestaurantIds })
+          .eq("id", courierId);
+        if (updateError) {
+          return NextResponse.json({ ok: false, error: updateError.message }, { status: 500 });
+        }
       }
     }
 
-    for (const [vipId, assignedCourierIds] of Object.entries(vipAssignments)) {
-      const { error: vipUpdateError } = await supabase
-        .from("vip_customers")
-        .update({ assigned_courier_ids: assignedCourierIds })
-        .eq("id", vipId);
-      if (vipUpdateError) {
-        return NextResponse.json({ ok: false, error: vipUpdateError.message }, { status: 500 });
+    // Only update VIP assignments when the VIP map is submitted.
+    if (vipAssignments) {
+      for (const [vipId, assignedCourierIds] of Object.entries(vipAssignments)) {
+        const { error: vipUpdateError } = await supabase
+          .from("vip_customers")
+          .update({ assigned_courier_ids: assignedCourierIds })
+          .eq("id", vipId);
+        if (vipUpdateError) {
+          return NextResponse.json({ ok: false, error: vipUpdateError.message }, { status: 500 });
+        }
       }
     }
 

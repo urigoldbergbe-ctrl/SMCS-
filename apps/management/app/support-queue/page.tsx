@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMessages } from "../lib/i18n";
 
 interface Ticket {
   id: string;
@@ -11,6 +12,7 @@ interface Ticket {
 }
 
 export default function SupportQueuePage() {
+  const { t } = useMessages();
   const [status, setStatus] = useState("ממתין");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,7 @@ export default function SupportQueuePage() {
 
   return (
     <section className="stack">
-      <h1>תור תמיכה</h1>
+      <h1>{t.support_title}</h1>
       <article className="card">
         <button className="button" onClick={createDemoTicket} disabled={creating}>
           {creating ? "יוצר פנייה..." : "יצירת פנייה מוסלמת"}

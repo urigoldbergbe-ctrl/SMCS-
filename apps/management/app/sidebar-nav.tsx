@@ -8,6 +8,7 @@ interface NavItem {
   labelEn: string;
   href: string;
   icon: string;
+  external?: boolean;
 }
 
 export default function SidebarNav({ items }: { items: NavItem[] }) {
@@ -39,9 +40,14 @@ export default function SidebarNav({ items }: { items: NavItem[] }) {
   return (
     <nav className="sidebar-nav">
       {items.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = !item.external && pathname === item.href;
         return (
-          <a key={item.href} href={item.href} className={`nav-item ${isActive ? "active" : ""}`}>
+          <a
+            key={item.href}
+            href={item.href}
+            className={`nav-item ${isActive ? "active" : ""} ${item.external ? "nav-item-external" : ""}`}
+            {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+          >
             <span className="nav-icon">{item.icon}</span>
             <span>{language === "he" ? item.labelHe : item.labelEn}</span>
           </a>

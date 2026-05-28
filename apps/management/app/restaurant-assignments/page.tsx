@@ -24,8 +24,14 @@ interface NamedEntity {
 
 type AssignmentsMap = Record<string, string[]>;
 
-const requiredCouriersByStatus: Record<VipStatus, number> = {
-  half_time: 1,
+interface ComplianceEntry {
+  capacity: number;
+  required: number;
+  compliant: boolean;
+}
+
+const requiredCapacityByStatus: Record<VipStatus, number> = {
+  half_time: 0.5,
   one_full: 1,
   two_full: 2
 };
@@ -46,6 +52,7 @@ export default function RestaurantAssignmentsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [couriers, setCouriers] = useState<NamedEntity[]>([]);
   const [assignments, setAssignments] = useState<AssignmentsMap>({});
+  const [compliance, setCompliance] = useState<Record<string, ComplianceEntry>>({});
   const [form, setForm] = useState(emptyForm);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,11 +77,13 @@ export default function RestaurantAssignmentsPage() {
       const restaurantsData = (await restaurantsRes.json()) as { restaurants?: Restaurant[] };
       const assignmentsData = (await assignmentsRes.json()) as {
         assignments?: { restaurants?: AssignmentsMap };
+        compliance?: { restaurants?: Record<string, ComplianceEntry> };
         dictionaries?: { couriers?: NamedEntity[] };
       };
       const couriersData = (await couriersRes.json()) as { couriers?: NamedEntity[] };
       setRestaurants(restaurantsData.restaurants ?? []);
       setAssignments(assignmentsData.assignments?.restaurants ?? {});
+      setCompliance(assignmentsData.compliance?.restaurants ?? {});
       setCouriers(assignmentsData.dictionaries?.couriers ?? couriersData.couriers ?? []);
       setLastRefreshed(new Date().toLocaleString());
     } catch {
@@ -154,10 +163,13 @@ export default function RestaurantAssignmentsPage() {
     () =>
       restaurants.map((restaurant) => {
         const assignedCount = (assignments[restaurant.id] ?? []).length;
-        const required = requiredCouriersByStatus[restaurant.vipStatus];
-        return { restaurant, assignedCount, required, compliant: assignedCount >= required };
+        const entry = compliance[restaurant.id];
+        const required = entry?.required ?? requiredCapacityByStatus[restaurant.vipStatus];
+        const capacity = entry?.capacity ?? assignedCount;
+        const compliant = entry ? entry.compliant : capacity + 1e-9 >= required;
+        return { restaurant, assignedCount, required, capacity, compliant };
       }),
-    [restaurants, assignments]
+    [restaurants, assignments, compliance]
   );
 
   return (
@@ -194,7 +206,7 @@ export default function RestaurantAssignmentsPage() {
         <div className="alert-list">
           {loading ? <div className="alert-item">{t.loading}</div> : null}
           {!loading && complianceRows.length === 0 ? <div className="alert-item">—</div> : null}
-          {complianceRows.map(({ restaurant, assignedCount, required, compliant }) => (
+          {complianceRows.map(({ restaurant, assignedCount, required, capacity, compliant }) => (
             <div key={restaurant.id} className={`alert-item ${compliant ? "" : "row-alert"}`}>
               <div>
                 {compliant ? "" : <span className="alert-icon">⚠ </span>}
@@ -202,7 +214,7 @@ export default function RestaurantAssignmentsPage() {
                 {restaurant.code ? ` · ${restaurant.code}` : ""} · {restaurant.city}
               </div>
               <div className="muted-text">
-                {t.restaurants_vip_status}: {vipStatusLabel(restaurant.vipStatus)} · {t.restaurants_required}: {required} · {t.restaurants_assigned}: {assignedCount}
+                {t.restaurants_vip_status}: {vipStatusLabel(restaurant.vipStatus)} · {t.restaurants_required}: {required} · {t.restaurants_capacity}: {capacity} · {t.restaurants_assigned}: {assignedCount}
                 {compliant ? "" : ` · ${t.restaurants_alert}`}
               </div>
             </div>

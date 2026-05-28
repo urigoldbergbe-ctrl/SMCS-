@@ -27,8 +27,14 @@ interface NamedEntity {
 
 type AssignmentsMap = Record<string, string[]>;
 
-const requiredCouriersByStatus: Record<VipStatus, number> = {
-  half_time: 1,
+interface ComplianceEntry {
+  capacity: number;
+  required: number;
+  compliant: boolean;
+}
+
+const requiredCapacityByStatus: Record<VipStatus, number> = {
+  half_time: 0.5,
   one_full: 1,
   two_full: 2
 };
@@ -51,6 +57,7 @@ export default function VipCustomersPage() {
   const [vipCustomers, setVipCustomers] = useState<VipCustomer[]>([]);
   const [couriers, setCouriers] = useState<NamedEntity[]>([]);
   const [assignments, setAssignments] = useState<AssignmentsMap>({});
+  const [compliance, setCompliance] = useState<Record<string, ComplianceEntry>>({});
   const [form, setForm] = useState(emptyForm);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +82,7 @@ export default function VipCustomersPage() {
       const vipData = (await vipRes.json()) as { vipCustomers?: VipCustomer[] };
       const assignmentsData = (await assignmentsRes.json()) as {
         assignments?: { vip?: AssignmentsMap };
+        compliance?: { vip?: Record<string, ComplianceEntry> };
         dictionaries?: { couriers?: NamedEntity[] };
       };
       const couriersData = (await couriersRes.json()) as { couriers?: NamedEntity[] };
@@ -83,6 +91,7 @@ export default function VipCustomersPage() {
       const fromList: AssignmentsMap = {};
       for (const vip of list) fromList[vip.id] = vip.assignedCourierIds ?? [];
       setAssignments({ ...fromList, ...(assignmentsData.assignments?.vip ?? {}) });
+      setCompliance(assignmentsData.compliance?.vip ?? {});
       setCouriers(assignmentsData.dictionaries?.couriers ?? couriersData.couriers ?? []);
       setLastRefreshed(new Date().toLocaleString());
     } catch {
@@ -162,10 +171,13 @@ export default function VipCustomersPage() {
     () =>
       vipCustomers.map((vip) => {
         const assignedCount = (assignments[vip.id] ?? []).length;
-        const required = requiredCouriersByStatus[vip.vipStatus];
-        return { vip, assignedCount, required, compliant: assignedCount >= required };
+        const entry = compliance[vip.id];
+        const required = entry?.required ?? requiredCapacityByStatus[vip.vipStatus];
+        const capacity = entry?.capacity ?? assignedCount;
+        const compliant = entry ? entry.compliant : capacity + 1e-9 >= required;
+        return { vip, assignedCount, required, capacity, compliant };
       }),
-    [vipCustomers, assignments]
+    [vipCustomers, assignments, compliance]
   );
 
   return (
@@ -204,7 +216,7 @@ export default function VipCustomersPage() {
         <div className="alert-list">
           {loading ? <div className="alert-item">{t.loading}</div> : null}
           {!loading && complianceRows.length === 0 ? <div className="alert-item">—</div> : null}
-          {complianceRows.map(({ vip, assignedCount, required, compliant }) => (
+          {complianceRows.map(({ vip, assignedCount, required, capacity, compliant }) => (
             <div key={vip.id} className={`alert-item ${compliant ? "" : "row-alert"}`}>
               <div>
                 {compliant ? "" : <span className="alert-icon">⚠ </span>}
@@ -212,7 +224,7 @@ export default function VipCustomersPage() {
                 {vip.code ? ` · ${vip.code}` : ""} · {vip.city}
               </div>
               <div className="muted-text">
-                {t.restaurants_vip_status}: {vipStatusLabel(vip.vipStatus)} · {t.restaurants_required}: {required} · {t.restaurants_assigned}: {assignedCount}
+                {t.restaurants_vip_status}: {vipStatusLabel(vip.vipStatus)} · {t.restaurants_required}: {required} · {t.restaurants_capacity}: {capacity} · {t.restaurants_assigned}: {assignedCount}
                 {compliant ? "" : ` · ${t.restaurants_alert}`}
               </div>
             </div>

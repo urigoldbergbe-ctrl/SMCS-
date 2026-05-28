@@ -155,23 +155,14 @@ export default function DashboardPage() {
 
         <article className="card wide">
           <h3>{t.realtimeMap}</h3>
-          <p style={{ color: "var(--muted)" }}>{t.realtimeMapDesc}</p>
+          <p className="muted-text">{t.realtimeMapDesc}</p>
           <div className="tag success">{t.engineHealthy}</div>
-          <iframe
-            title="מפת צי בזמן אמת"
-            src="https://www.google.com/maps?q=Beer+Sheva&output=embed"
-            style={{ width: "100%", height: "280px", border: "1px solid var(--border)", borderRadius: "10px", marginTop: "10px" }}
-            loading="lazy"
-          />
-          <div style={{ marginTop: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <iframe title="מפת צי בזמן אמת" src="https://www.google.com/maps?q=Beer+Sheva&output=embed" className="map-embed dashboard" loading="lazy" />
+          <div className="inline-actions">
             <button className="button" onClick={loadDashboard}>
               {language === "he" ? "רענון נתונים" : "Refresh Data"}
             </button>
-            <a
-              className="button"
-              href="/simulation?city=beer_sheva&fleetSize=12&datasetType=what_if"
-              style={{ display: "inline-block" }}
-            >
+            <a className="button" href="/simulation?city=beer_sheva&fleetSize=12&datasetType=what_if">
               {t.runSimulation}
             </a>
             <a className="button" href="/c">
@@ -183,18 +174,18 @@ export default function DashboardPage() {
         <article className="card feed">
           <h3>{t.alerts}</h3>
           <div className="alert-list">
-            {error ? <div className="alert-item" style={{ borderColor: "var(--danger)", color: "var(--danger)" }}>{error}</div> : null}
+            {error ? <div className="alert-item status-danger">{error}</div> : null}
             {snapshot.highPtodOrders.length === 0 && snapshot.noProgressOrders.length === 0 ? (
               <div className="alert-item">{t.noAlerts}</div>
             ) : null}
             {snapshot.highPtodOrders.map((item) => (
-              <div key={item.orderId} className="alert-item" style={{ borderColor: "var(--danger)", color: "#8f1f1f" }}>
+              <div key={item.orderId} className="alert-item status-danger">
                 {t.highPtodPrefix} {item.orderId} {language === "he" ? "מסומנת PToD גבוה:" : "flagged for high PToD:"}{" "}
                 {Math.round(item.ptodMinutes)} {language === "he" ? "דקות" : "minutes"}
               </div>
             ))}
             {snapshot.noProgressOrders.map((item) => (
-              <div key={item.orderId} className="alert-item" style={{ borderColor: "var(--danger)", color: "#8f1f1f" }}>
+              <div key={item.orderId} className="alert-item status-danger">
                 {t.noProgressPrefix} {item.orderId}{" "}
                 {language === "he" ? "ללא התקדמות כבר" : "has no progress for"} {item.minutesWithoutProgress}{" "}
                 {language === "he" ? "דקות" : "minutes"}

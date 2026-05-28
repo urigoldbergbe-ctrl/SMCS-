@@ -19,32 +19,43 @@ export default function SimulationClient({
   const [fleetSize, setFleetSize] = useState(initialFleetSize);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function run(): Promise<void> {
-    setRunning(true);
-    const response = await fetch("/api/simulation", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        city,
-        datasetType,
-        fleetSize,
-        dateRange: {
-          from: "2026-04-01T00:00:00.000Z",
-          to: "2026-04-30T23:59:59.000Z"
-        }
-      })
-    });
-    const body = await response.json();
-    setRunning(false);
-    if (response.ok) setResult(body.result as SimulationResult);
+    try {
+      setRunning(true);
+      setError(null);
+      const response = await fetch("/api/simulation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          city,
+          datasetType,
+          fleetSize,
+          dateRange: {
+            from: "2026-04-01T00:00:00.000Z",
+            to: "2026-04-30T23:59:59.000Z"
+          }
+        })
+      });
+      const body = (await response.json()) as { result?: SimulationResult; error?: string };
+      if (!response.ok || !body.result) {
+        setError(body.error ?? "הרצת סימולציה נכשלה.");
+        return;
+      }
+      setResult(body.result);
+    } catch {
+      setError("הרצת סימולציה נכשלה.");
+    } finally {
+      setRunning(false);
+    }
   }
 
   return (
     <section className="stack">
       <h1>מצב סימולציה</h1>
       <article className="card">
-        <div className="form-row" style={{ marginBottom: "10px" }}>
+        <div className="form-row">
           <label>עיר</label>
           <select className="select" value={city} onChange={(event) => setCity(event.target.value)}>
             <option value="beer_sheva">באר שבע</option>
@@ -70,6 +81,7 @@ export default function SimulationClient({
         <button className="button" disabled={running} onClick={run}>
           {running ? "מריץ סימולציה..." : "הרץ סימולציה"}
         </button>
+        {error ? <div className="alert-item status-danger">{error}</div> : null}
       </article>
       {result ? (
         <article className="card">

@@ -215,21 +215,10 @@ export default function OrdersPage() {
             value={form.restaurantAddressFull}
             onChange={(event) => updateField("restaurantAddressFull", event.target.value)}
           />
-          <a
-            className="button"
-            href={buildMapLink(restaurantMapAddress)}
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: "inline-block" }}
-          >
+          <a className="button" href={buildMapLink(restaurantMapAddress)} target="_blank" rel="noreferrer">
             פתח כתובת מסעדה בגוגל מפות
           </a>
-          <iframe
-            title="מפת מיקום מסעדה"
-            src={buildMapEmbedUrl(restaurantMapAddress)}
-            style={{ width: "100%", height: "220px", border: "1px solid var(--border)", borderRadius: "10px" }}
-            loading="lazy"
-          />
+          <iframe title="מפת מיקום מסעדה" src={buildMapEmbedUrl(restaurantMapAddress)} className="map-embed order" loading="lazy" />
           <input
             className="input"
             placeholder="שם הלקוח"
@@ -248,21 +237,10 @@ export default function OrdersPage() {
             value={form.customerAddressFull}
             onChange={(event) => updateField("customerAddressFull", event.target.value)}
           />
-          <a
-            className="button"
-            href={buildMapLink(customerMapAddress)}
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: "inline-block" }}
-          >
+          <a className="button" href={buildMapLink(customerMapAddress)} target="_blank" rel="noreferrer">
             פתח כתובת לקוח בגוגל מפות
           </a>
-          <iframe
-            title="מפת מיקום לקוח"
-            src={buildMapEmbedUrl(customerMapAddress)}
-            style={{ width: "100%", height: "220px", border: "1px solid var(--border)", borderRadius: "10px" }}
-            loading="lazy"
-          />
+          <iframe title="מפת מיקום לקוח" src={buildMapEmbedUrl(customerMapAddress)} className="map-embed order" loading="lazy" />
           <textarea
             className="textarea"
             placeholder="הערות נוספות"
@@ -276,20 +254,20 @@ export default function OrdersPage() {
             {routeLoading ? "בודק מסלול..." : "בדיקת כתובות (אופציונלי)"}
           </button>
           {message ? <p>{message}</p> : null}
-          {routeInfo?.warning ? <p style={{ color: "var(--warning)" }}>{routeInfo.warning}</p> : null}
+          {routeInfo?.warning ? <p className="status-warning">{routeInfo.warning}</p> : null}
           {routeInfo?.warnings?.length ? (
-            <div className="alert-item" style={{ borderColor: "var(--warning)", color: "var(--warning)" }}>
+            <div className="alert-item status-warning">
               {routeInfo.warnings.map((warning) => (
                 <div key={warning}>אזהרה: {warning}</div>
               ))}
             </div>
           ) : null}
           {routeInfo?.routeEstimate ? (
-            <div className="alert-item" style={{ borderColor: "var(--success)" }}>
+            <div className="alert-item">
               <div>מרחק: {routeInfo.routeEstimate.distanceText}</div>
               <div>זמן הגעה משוער: {routeInfo.routeEstimate.durationText}</div>
               {routeInfo.normalizedAddresses ? (
-                <div style={{ color: "var(--muted)" }}>
+                <div className="muted-text">
                   מסלול: {routeInfo.normalizedAddresses.origin} -&gt; {routeInfo.normalizedAddresses.destination}
                 </div>
               ) : null}
@@ -304,10 +282,10 @@ export default function OrdersPage() {
         {orders.map((order) => (
           <div key={order.id} className="alert-item">
             <strong>{order.restaurantName}</strong> - {order.customerName} ({order.customerPhone})
-            <div style={{ color: "var(--muted)" }}>
+            <div className="muted-text">
               {order.restaurantAddressFull} | {order.customerAddressFull} | סטטוס: {order.status}
             </div>
-            <div style={{ display: "flex", gap: "10px", marginTop: "8px", flexWrap: "wrap" }}>
+            <div className="inline-actions">
               <a href={buildMapLink(order.restaurantAddressFull)} target="_blank" rel="noreferrer">
                 מפת מסעדה
               </a>
@@ -318,14 +296,13 @@ export default function OrdersPage() {
             {order.status === "pending_dispatch" ? (
               <button
                 className="button"
-                style={{ marginTop: "8px" }}
                 onClick={() => dispatchOrder(order.id)}
                 disabled={dispatchingOrderId === order.id}
               >
                 {dispatchingOrderId === order.id ? "משבץ..." : "שיבוץ עכשיו"}
               </button>
             ) : null}
-            {order.notes ? <div style={{ color: "var(--muted)" }}>הערות: {order.notes}</div> : null}
+            {order.notes ? <div className="muted-text">הערות: {order.notes}</div> : null}
           </div>
         ))}
       </article>

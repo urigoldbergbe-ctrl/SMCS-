@@ -76,7 +76,7 @@ export default function CourierSettingsPage() {
   return (
     <main className="mobile">
       <section className="card">
-        <h1 style={{ marginTop: 0 }}>הגדרות אפליקציה</h1>
+        <h1 className="page-title">הגדרות אפליקציה</h1>
         <p className="muted">בחירת שפה, מראה והעדפות חשבון לשליח.</p>
       </section>
 

@@ -8,7 +8,7 @@ export default function DeliveryLogsPage() {
   return (
     <main className="mobile">
       <section className="card">
-        <h1 style={{ marginTop: 0 }}>יומן משלוחים</h1>
+        <h1 className="page-title">יומן משלוחים</h1>
         <div className="alert-list">
           {deliveryLog.map((row) => (
             <div key={row} className="alert-item">

@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const [language, setLanguage] = useState<Language>("he");
   const [appearance, setAppearance] = useState<Appearance>("light");
   const [saved, setSaved] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const raw = localStorage.getItem(settingsKey);
@@ -49,18 +50,27 @@ export default function SettingsPage() {
   }, []);
 
   async function saveMode(): Promise<void> {
-    const response = await fetch("/api/mode", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode })
-    });
-    if (!response.ok) {
-      setSaved("עדכון המצב נכשל.");
-      return;
+    if (saving) return;
+    setSaving(true);
+    try {
+      const response = await fetch("/api/mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode })
+      });
+      if (!response.ok) {
+        setSaved("עדכון המצב נכשל.");
+        return;
+      }
+      localStorage.setItem(settingsKey, JSON.stringify({ language, appearance }));
+      applyManagementUi(language, appearance);
+      window.dispatchEvent(new CustomEvent("management-language-changed", { detail: { language } }));
+      setSaved("המצב, השפה והתצוגה עודכנו.");
+    } catch {
+      setSaved("עדכון ההגדרות נכשל עקב שגיאת רשת.");
+    } finally {
+      setSaving(false);
     }
-    localStorage.setItem(settingsKey, JSON.stringify({ language, appearance }));
-    applyManagementUi(language, appearance);
-    setSaved("המצב, השפה והתצוגה עודכנו.");
   }
 
   return (
@@ -85,8 +95,8 @@ export default function SettingsPage() {
           <option value="light">בהיר</option>
           <option value="dark">כהה</option>
         </select>
-        <button className="button" onClick={saveMode}>
-          שמירה
+        <button className="button" onClick={saveMode} disabled={saving}>
+          {saving ? "שומר..." : "שמירה"}
         </button>
         {saved ? <p>{saved}</p> : null}
       </article>

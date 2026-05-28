@@ -25,6 +25,21 @@ body {
   margin: 0 auto;
   min-height: 100vh;
   padding: 16px;
+  position: relative;
+}
+
+.lang-toggle-mobile {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 40;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 128, 0, 0.45);
+  background: #fff3e4;
+  color: #7b4200;
+  font-weight: 800;
+  padding: 8px 12px;
+  cursor: pointer;
 }
 
 .sticky-top {

@@ -153,8 +153,27 @@ export default function CourierHomePage() {
     setStatus("Problem queued for sync (offline safe).");
   }
 
+  function toggleDashboardLanguage(): void {
+    const nextLanguage: Language = language === "he" ? "en" : "he";
+    const raw = localStorage.getItem(settingsKey);
+    let appearance = "light";
+    try {
+      const parsed = raw ? (JSON.parse(raw) as { appearance?: string }) : {};
+      appearance = parsed.appearance ?? "light";
+    } catch {
+      appearance = "light";
+    }
+    localStorage.setItem(settingsKey, JSON.stringify({ language: nextLanguage, appearance }));
+    setLanguage(nextLanguage);
+    document.documentElement.lang = nextLanguage;
+    document.documentElement.dir = nextLanguage === "he" ? "rtl" : "ltr";
+  }
+
   return (
     <main className="mobile">
+      <button className="lang-toggle-mobile" onClick={toggleDashboardLanguage} aria-label="Toggle courier language">
+        {language === "he" ? "EN" : "HE"}
+      </button>
       <section className="sticky-top card">
         <p className="delivery-code">{deliveryCode}</p>
         <h1 style={{ margin: "0 0 8px" }}>{customerName}</h1>

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import SidebarNav from "./sidebar-nav";
 import UiPreferences from "./ui-preferences";
+import LanguageToggle from "./language-toggle";
 
 export const metadata: Metadata = {
   title: "מערכת ניהול שליחים אסטרטגית",
@@ -19,7 +20,6 @@ const navItems = [
   { label: "אנליטיקה", href: "/analytics", icon: "◼" },
   { label: "הגדרות דיספאץ'", href: "/dispatch-config", icon: "◼" },
   { label: "סימולציה", href: "/simulation", icon: "◼" },
-  { label: "יועץ תצורה AI", href: "/ai-config-advisor", icon: "◼" },
   { label: "תרגומים", href: "/translations", icon: "◼" },
   { label: "תור תמיכה", href: "/support-queue", icon: "◼" },
   { label: "יומן ביקורת", href: "/audit-log", icon: "◼" },
@@ -31,6 +31,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="he" dir="rtl">
       <body>
         <UiPreferences />
+        <LanguageToggle />
         <div className="layout">
           <aside className="sidebar">
             <div className="brand">

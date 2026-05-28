@@ -168,75 +168,87 @@ export default function CourierHomePage() {
   }
 
   return (
-    <main className="mobile">
-      <div className={`lang-toggle-row ${language === "he" ? "align-left" : "align-right"}`}>
-        <button className="lang-toggle-mobile" onClick={toggleDashboardLanguage} aria-label="Toggle courier language">
-          {language === "he" ? "EN" : "HE"}
-        </button>
-      </div>
-      <section className="sticky-top card">
-        <p className="delivery-code">{deliveryCode}</p>
-        <h1 style={{ margin: "0 0 8px" }}>{customerName}</h1>
-        <div className="status-row">
-          <button className={`status-btn ${statusStep === "accept" ? "active" : ""}`} onClick={() => setStatusStep("accept")}>
-            {t.accept}
-          </button>
-          <button className={`status-btn ${statusStep === "arrived" ? "active" : ""}`} onClick={() => setStatusStep("arrived")}>
-            {t.arrived}
-          </button>
-          <button className={`status-btn ${statusStep === "onway" ? "active" : ""}`} onClick={() => setStatusStep("onway")}>
-            {t.onWay}
-          </button>
-          <button className={`status-btn ${statusStep === "delivered" ? "active" : ""}`} onClick={() => setStatusStep("delivered")}>
-            {t.delivered}
+    <main className="courier-shell">
+      <iframe title="Pickup and dropoff route map" src={mapEmbed} className="courier-map" loading="lazy" />
+
+      <div className="courier-overlay">
+        <div className={`lang-toggle-row ${language === "he" ? "align-left" : "align-right"}`}>
+          <button className="lang-toggle-mobile" onClick={toggleDashboardLanguage} aria-label="Toggle courier language">
+            {language === "he" ? "EN" : "HE"}
           </button>
         </div>
-      </section>
 
-      <section className="card">
-        <div className="status">{shiftOnline ? t.shiftActive : t.shiftOff}</div>
-        <button className="primary" onClick={startShift} style={{ marginTop: "8px" }}>
+        <section className="top-card">
+          <div className="online-chip">{shiftOnline ? t.shiftActive : t.shiftOff}</div>
+          <p className="delivery-code">{deliveryCode}</p>
+          <h1 className="customer-name">{customerName}</h1>
+          <div className="status-row">
+            <button className={`status-btn ${statusStep === "accept" ? "active" : ""}`} onClick={() => setStatusStep("accept")}>
+              {t.accept}
+            </button>
+            <button className={`status-btn ${statusStep === "arrived" ? "active" : ""}`} onClick={() => setStatusStep("arrived")}>
+              {t.arrived}
+            </button>
+            <button className={`status-btn ${statusStep === "onway" ? "active" : ""}`} onClick={() => setStatusStep("onway")}>
+              {t.onWay}
+            </button>
+            <button className={`status-btn ${statusStep === "delivered" ? "active" : ""}`} onClick={() => setStatusStep("delivered")}>
+              {t.delivered}
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <section className="bottom-sheet">
+        <button className="primary" onClick={startShift}>
           {shiftOnline ? t.onShift : t.startShift}
         </button>
-      </section>
 
-      <section className="card">
-        <h2 style={{ marginTop: 0 }}>{t.routeTitle}</h2>
-        <iframe title="Pickup and dropoff route map" src={mapEmbed} className="map-frame" loading="lazy" />
-        <div className="action-row" style={{ marginTop: "10px" }}>
-          <a className="primary" href={wazeUrl} target="_blank" rel="noreferrer" style={{ textAlign: "center" }}>
-            {t.navigate}
-          </a>
-          <div className="alert-item">
-            <strong>{t.pickup}:</strong> {pickupAddress}
+        <a className="nav-cta" href={wazeUrl} target="_blank" rel="noreferrer">
+          {t.navigate}
+        </a>
+
+        <div className="trip-info">
+          <div className="trip-row">
+            <span className="dot pickup-dot" />
+            <div>
+              <div className="trip-label">{t.pickup}</div>
+              <div className="trip-value">{pickupAddress}</div>
+            </div>
           </div>
-          <div className="alert-item">
-            <strong>{t.dropoff}:</strong> {dropoffAddress}
+          <div className="trip-row">
+            <span className="dot dropoff-dot" />
+            <div>
+              <div className="trip-label">{t.dropoff}</div>
+              <div className="trip-value">{dropoffAddress}</div>
+            </div>
           </div>
-          <div className="alert-item">
-            <strong>{t.nextJob}:</strong> {nextJob}
+          <div className="trip-row">
+            <span className="dot next-dot" />
+            <div>
+              <div className="trip-label">{t.nextJob}</div>
+              <div className="trip-value">{nextJob}</div>
+            </div>
           </div>
         </div>
-      </section>
 
-      <section className="card">
-        <div className="action-row">
-          <a className="secondary" href="tel:+972501234567" style={{ textAlign: "center" }}>
+        <div className="quick-actions">
+          <a className="secondary" href="tel:+972501234567">
             {t.callCustomer}
           </a>
           <button className="secondary" onClick={reportProblem}>
             {t.supportChat}
           </button>
-          <a className="secondary" href="/settings" style={{ textAlign: "center" }}>
+          <a className="secondary" href="/settings">
             {t.settings}
           </a>
-          <p className="muted">
-            {t.offlineQueue}: {queuedCount}
-          </p>
         </div>
-      </section>
 
-      {status ? <section className="card">{status}</section> : null}
+        <p className="muted queue-text">
+          {t.offlineQueue}: {queuedCount}
+        </p>
+        {status ? <p className="muted queue-text">{status}</p> : null}
+      </section>
     </main>
   );
 }

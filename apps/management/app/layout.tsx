@@ -13,6 +13,7 @@ const navItems = [
   { label: "שליחים", href: "/couriers", icon: "◼" },
   { label: "שיוך מסעדות", href: "/restaurant-assignments", icon: "◼" },
   { label: "לקוחות VIP", href: "/vip-customers", icon: "◼" },
+  { label: "אזורים", href: "/zones", icon: "◼" },
   { label: "הזמנות", href: "/orders", icon: "◼" },
   { label: "יומן נסיעות", href: "/trip-log", icon: "◼" },
   { label: "אנליטיקה", href: "/analytics", icon: "◼" },

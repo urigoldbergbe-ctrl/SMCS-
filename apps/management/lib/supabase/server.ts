@@ -9,7 +9,8 @@ function readEnv(name: string): string {
 }
 
 export function getSupabaseAdminClient() {
-  const url = readEnv("SUPABASE_URL");
+  const rawUrl = readEnv("SUPABASE_URL");
+  const url = rawUrl.replace(/\/rest\/v1\/?$/, "");
   const serviceRoleKey = readEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   return createClient(url, serviceRoleKey, {

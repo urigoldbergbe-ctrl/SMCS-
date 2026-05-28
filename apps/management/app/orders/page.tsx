@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ManualOrderEntry } from "@scms/shared";
 
 interface FormState {
@@ -46,13 +46,47 @@ function buildMapLink(address: string): string {
 }
 
 export default function OrdersPage() {
+  const [city, setCity] = useState("beer_sheva");
   const [form, setForm] = useState<FormState>(initialFormState);
   const [orders, setOrders] = useState<ManualOrderEntry[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteEstimateResponse | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [routeValidatedForSubmit, setRouteValidatedForSubmit] = useState(false);
+
+  const restaurantMapAddress = useMemo(
+    () => (form.restaurantAddressFull.trim() ? form.restaurantAddressFull : "באר שבע"),
+    [form.restaurantAddressFull]
+  );
+  const customerMapAddress = useMemo(
+    () => (form.customerAddressFull.trim() ? form.customerAddressFull : "אשדוד"),
+    [form.customerAddressFull]
+  );
+
+  useEffect(() => {
+    void (async () => {
+      const response = await fetch("/api/orders/manual");
+      const body = (await response.json()) as { orders?: ManualOrderEntry[] };
+      setOrders(body.orders ?? []);
+    })();
+  }, []);
 
   async function submitOrder(): Promise<void> {
+    const missingRequiredFields =
+      !form.restaurantName.trim() ||
+      !form.restaurantAddressFull.trim() ||
+      !form.customerName.trim() ||
+      !form.customerPhone.trim() ||
+      !form.customerAddressFull.trim();
+    if (missingRequiredFields) {
+      setMessage("יש למלא את כל השדות לפני שליחה.");
+      return;
+    }
+    if (!routeValidatedForSubmit) {
+      setMessage("חובה לבצע אימות כתובות וחישוב מסלול לפני שליחת הזמנה.");
+      return;
+    }
+
     setMessage("שולח...");
     const response = await fetch("/api/orders/manual", {
       method: "POST",
@@ -66,16 +100,37 @@ export default function OrdersPage() {
     });
     const body = await response.json();
     if (!response.ok) {
-      setMessage("יצירת הזמנה נכשלה. יש למלא את כל השדות הנדרשים.");
+      setMessage("יצירת הזמנה נכשלה. יש לבדוק תקינות נתונים ולנסות שוב.");
       return;
     }
     setOrders((current) => [body.order as ManualOrderEntry, ...current]);
     setForm(initialFormState);
+    setRouteInfo(null);
+    setRouteValidatedForSubmit(false);
     setMessage("ההזמנה נשלחה לתור השיבוץ.");
+  }
+
+  async function dispatchOrder(orderId: string): Promise<void> {
+    setMessage("מריץ שיבוץ הזמנה...");
+    const response = await fetch("/api/orders/manual/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, city })
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      setMessage(`שיבוץ נכשל: ${body.error ?? "unknown error"}`);
+      return;
+    }
+    setMessage("השיבוץ בוצע בהצלחה.");
+    setOrders((current) => current.map((row) => (row.id === orderId ? { ...row, status: "assigned" } : row)));
   }
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]): void {
     setForm((current) => ({ ...current, [field]: value }));
+    if (field === "restaurantAddressFull" || field === "customerAddressFull") {
+      setRouteValidatedForSubmit(false);
+    }
   }
 
   async function validateAndEstimateRoute(): Promise<void> {
@@ -89,6 +144,7 @@ export default function OrdersPage() {
     }
 
     setRouteLoading(true);
+    setRouteValidatedForSubmit(false);
     const response = await fetch("/api/maps/route-estimate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -100,6 +156,7 @@ export default function OrdersPage() {
     const body = (await response.json()) as RouteEstimateResponse;
     setRouteLoading(false);
     setRouteInfo(body);
+    setRouteValidatedForSubmit(Boolean(body.validated && body.routeEstimate));
   }
 
   return (
@@ -108,6 +165,12 @@ export default function OrdersPage() {
       <article className="card">
         <h3>הזנת הזמנה ידנית</h3>
         <div className="form-row">
+          <label>עיר שיבוץ</label>
+          <select className="select" value={city} onChange={(event) => setCity(event.target.value)}>
+            <option value="beer_sheva">באר שבע</option>
+            <option value="ashdod">אשדוד</option>
+            <option value="tlv">תל אביב</option>
+          </select>
           <input
             className="input"
             placeholder="שם המסעדה"
@@ -120,25 +183,21 @@ export default function OrdersPage() {
             value={form.restaurantAddressFull}
             onChange={(event) => updateField("restaurantAddressFull", event.target.value)}
           />
-          {form.restaurantAddressFull ? (
-            <>
-              <a
-                className="button"
-                href={buildMapLink(form.restaurantAddressFull)}
-                target="_blank"
-                rel="noreferrer"
-                style={{ display: "inline-block" }}
-              >
-                פתח כתובת מסעדה בגוגל מפות
-              </a>
-              <iframe
-                title="מפת מיקום מסעדה"
-                src={buildMapEmbedUrl(form.restaurantAddressFull)}
-                style={{ width: "100%", height: "220px", border: "1px solid var(--border)", borderRadius: "10px" }}
-                loading="lazy"
-              />
-            </>
-          ) : null}
+          <a
+            className="button"
+            href={buildMapLink(restaurantMapAddress)}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: "inline-block" }}
+          >
+            פתח כתובת מסעדה בגוגל מפות
+          </a>
+          <iframe
+            title="מפת מיקום מסעדה"
+            src={buildMapEmbedUrl(restaurantMapAddress)}
+            style={{ width: "100%", height: "220px", border: "1px solid var(--border)", borderRadius: "10px" }}
+            loading="lazy"
+          />
           <input
             className="input"
             placeholder="שם הלקוח"
@@ -157,25 +216,21 @@ export default function OrdersPage() {
             value={form.customerAddressFull}
             onChange={(event) => updateField("customerAddressFull", event.target.value)}
           />
-          {form.customerAddressFull ? (
-            <>
-              <a
-                className="button"
-                href={buildMapLink(form.customerAddressFull)}
-                target="_blank"
-                rel="noreferrer"
-                style={{ display: "inline-block" }}
-              >
-                פתח כתובת לקוח בגוגל מפות
-              </a>
-              <iframe
-                title="מפת מיקום לקוח"
-                src={buildMapEmbedUrl(form.customerAddressFull)}
-                style={{ width: "100%", height: "220px", border: "1px solid var(--border)", borderRadius: "10px" }}
-                loading="lazy"
-              />
-            </>
-          ) : null}
+          <a
+            className="button"
+            href={buildMapLink(customerMapAddress)}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: "inline-block" }}
+          >
+            פתח כתובת לקוח בגוגל מפות
+          </a>
+          <iframe
+            title="מפת מיקום לקוח"
+            src={buildMapEmbedUrl(customerMapAddress)}
+            style={{ width: "100%", height: "220px", border: "1px solid var(--border)", borderRadius: "10px" }}
+            loading="lazy"
+          />
           <textarea
             className="textarea"
             placeholder="הערות נוספות"
@@ -189,9 +244,12 @@ export default function OrdersPage() {
             {routeLoading ? "בודק מסלול..." : "אימות כתובות + חישוב מסלול"}
           </button>
           {message ? <p>{message}</p> : null}
+          <p style={{ color: routeValidatedForSubmit ? "var(--success)" : "var(--muted)" }}>
+            {routeValidatedForSubmit ? "האימות הושלם. ניתן לשלוח הזמנה." : "יש לבצע אימות כתובות לפני שליחה."}
+          </p>
           {routeInfo?.warning ? <p style={{ color: "var(--warning)" }}>{routeInfo.warning}</p> : null}
           {routeInfo?.warnings?.length ? (
-            <div className="alert-item" style={{ borderColor: "var(--warning)", color: "#ffd8a6" }}>
+            <div className="alert-item" style={{ borderColor: "var(--warning)", color: "var(--warning)" }}>
               {routeInfo.warnings.map((warning) => (
                 <div key={warning}>אזהרה: {warning}</div>
               ))}
@@ -217,7 +275,7 @@ export default function OrdersPage() {
           <div key={order.id} className="alert-item">
             <strong>{order.restaurantName}</strong> - {order.customerName} ({order.customerPhone})
             <div style={{ color: "var(--muted)" }}>
-              {order.restaurantAddressFull} | {order.customerAddressFull}
+              {order.restaurantAddressFull} | {order.customerAddressFull} | סטטוס: {order.status}
             </div>
             <div style={{ display: "flex", gap: "10px", marginTop: "8px", flexWrap: "wrap" }}>
               <a href={buildMapLink(order.restaurantAddressFull)} target="_blank" rel="noreferrer">
@@ -227,6 +285,11 @@ export default function OrdersPage() {
                 מפת לקוח
               </a>
             </div>
+            {order.status === "pending_dispatch" ? (
+              <button className="button" style={{ marginTop: "8px" }} onClick={() => dispatchOrder(order.id)}>
+                שיבוץ עכשיו
+              </button>
+            ) : null}
             {order.notes ? <div style={{ color: "var(--muted)" }}>הערות: {order.notes}</div> : null}
           </div>
         ))}

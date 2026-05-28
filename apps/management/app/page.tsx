@@ -1,14 +1,33 @@
-const alerts = [
-  "שליח C-102 לא מחובר במהלך משלוח כבר 64 שניות (אשדוד)",
-  "המסעדה 'Campus Grill' הגיעה ל-82% מתקרת OV",
-  "מוכנות לסיום מודל בבאר שבע: 11 מתוך 14 ימים עומדים ביעד"
-];
+"use client";
 
-const stalledOrders = [
-  "הזמנה 4812 - התקבלה לפני 22 דקות ללא התקדמות (שליח: עומר)",
-  "הזמנה 4829 - PToD צפוי מעל 60 דקות (שליח: דניאל)"
-];
+import { useEffect, useState } from "react";
+
+interface DashboardSnapshot {
+  pendingAssignment: number;
+  couriersOnRun: number;
+  highPtodOrders: Array<{ orderId: string; ptodMinutes: number }>;
+  noProgressOrders: Array<{ orderId: string; minutesWithoutProgress: number }>;
+}
+
+const defaultSnapshot: DashboardSnapshot = {
+  pendingAssignment: 0,
+  couriersOnRun: 0,
+  highPtodOrders: [],
+  noProgressOrders: []
+};
+
 export default function DashboardPage() {
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot>(defaultSnapshot);
+
+  useEffect(() => {
+    void (async () => {
+      const response = await fetch("/api/dashboard");
+      if (!response.ok) return;
+      const body = (await response.json()) as DashboardSnapshot;
+      setSnapshot(body);
+    })();
+  }, []);
+
   return (
     <>
       <div className="banner">מצב אינטגרטיבי פעיל - העברת מיקום כפולה פעילה</div>
@@ -32,11 +51,11 @@ export default function DashboardPage() {
         </article>
         <article className="card kpi">
           <h3>ממתינות לשיוך</h3>
-          <p>9</p>
+          <p>{snapshot.pendingAssignment}</p>
         </article>
         <article className="card kpi">
           <h3>שליחים בנסיעה</h3>
-          <p>18</p>
+          <p>{snapshot.couriersOnRun}</p>
         </article>
 
         <article className="card wide">
@@ -68,14 +87,17 @@ export default function DashboardPage() {
         <article className="card feed">
           <h3>התראות</h3>
           <div className="alert-list">
-            {alerts.map((alert) => (
-              <div key={alert} className="alert-item">
-                {alert}
+            {snapshot.highPtodOrders.length === 0 && snapshot.noProgressOrders.length === 0 ? (
+              <div className="alert-item">אין חריגות כרגע.</div>
+            ) : null}
+            {snapshot.highPtodOrders.map((item) => (
+              <div key={item.orderId} className="alert-item" style={{ borderColor: "var(--danger)", color: "#8f1f1f" }}>
+                הזמנה {item.orderId} מסומנת PToD גבוה: {Math.round(item.ptodMinutes)} דקות
               </div>
             ))}
-            {stalledOrders.map((flag) => (
-              <div key={flag} className="alert-item" style={{ borderColor: "var(--danger)", color: "#8f1f1f" }}>
-                {flag}
+            {snapshot.noProgressOrders.map((item) => (
+              <div key={item.orderId} className="alert-item" style={{ borderColor: "var(--danger)", color: "#8f1f1f" }}>
+                הזמנה {item.orderId} ללא התקדמות כבר {item.minutesWithoutProgress} דקות
               </div>
             ))}
           </div>

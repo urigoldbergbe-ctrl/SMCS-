@@ -1,57 +1,105 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 
-const key = "courier_assignments";
-
-const fallback = {
-  restaurants: {
-    "Campus Grill": ["דניאל לוי"],
-    "Burger Hub": ["מוחמד חטיב"],
-    "Pizza Station": ["סרגיי פטרוב"]
-  },
-  vip: {
-    "חברת אינטל": ["דניאל לוי", "מוחמד חטיב"],
-    "Global Tech HQ": ["רון כהן"],
-    "משרד עורכי דין לוין": ["סרגיי פטרוב"]
-  }
-};
-
 export async function GET() {
   try {
     const supabase = getSupabaseAdminClient();
-    const { data, error } = await supabase.from("app_settings").select("value").eq("key", key).maybeSingle();
-    if (error || !data) {
-      return NextResponse.json({ assignments: fallback });
+    const [restaurantsRes, couriersRes, vipRes] = await Promise.all([
+      supabase.from("restaurants").select("id, name").eq("is_active", true).order("name", { ascending: true }),
+      supabase
+        .from("couriers")
+        .select("id, name, assigned_restaurant_ids")
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
+      supabase.from("vip_customers").select("id, name, assigned_courier_ids").eq("is_active", true).order("name", { ascending: true })
+    ]);
+    if (restaurantsRes.error || couriersRes.error || vipRes.error) {
+      return NextResponse.json(
+        { error: restaurantsRes.error?.message ?? couriersRes.error?.message ?? vipRes.error?.message },
+        { status: 500 }
+      );
     }
-    return NextResponse.json({ assignments: data.value ?? fallback });
+
+    const assignmentsByRestaurant: Record<string, string[]> = {};
+    const assignmentsByVip: Record<string, string[]> = {};
+    const restaurants = restaurantsRes.data ?? [];
+    const couriers = couriersRes.data ?? [];
+    const vipCustomers = vipRes.data ?? [];
+
+    for (const restaurant of restaurants) {
+      assignmentsByRestaurant[restaurant.id] = [];
+    }
+    for (const courier of couriers) {
+      for (const restaurantId of courier.assigned_restaurant_ids ?? []) {
+        if (!assignmentsByRestaurant[restaurantId]) assignmentsByRestaurant[restaurantId] = [];
+        assignmentsByRestaurant[restaurantId].push(courier.id);
+      }
+    }
+    for (const vip of vipCustomers) {
+      assignmentsByVip[vip.id] = vip.assigned_courier_ids ?? [];
+    }
+
+    return NextResponse.json({
+      assignments: {
+        restaurants: assignmentsByRestaurant,
+        vip: assignmentsByVip
+      },
+      dictionaries: {
+        restaurants: restaurants.map((row) => ({ id: row.id, name: row.name })),
+        couriers: couriers.map((row) => ({ id: row.id, name: row.name })),
+        vipCustomers: vipCustomers.map((row) => ({ id: row.id, name: row.name }))
+      }
+    });
   } catch {
-    return NextResponse.json({ assignments: fallback });
+    return NextResponse.json({ assignments: { restaurants: {}, vip: {} }, dictionaries: { restaurants: [], couriers: [], vipCustomers: [] } });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { assignments?: unknown };
+    const body = (await request.json()) as {
+      assignments?: {
+        restaurants?: Record<string, string[]>;
+        vip?: Record<string, string[]>;
+      };
+    };
     const supabase = getSupabaseAdminClient();
-    const { data: existingData } = await supabase.from("app_settings").select("value").eq("key", key).maybeSingle();
-    const existing =
-      typeof existingData?.value === "object" && existingData.value
-        ? (existingData.value as Record<string, unknown>)
-        : fallback;
-    const incoming =
-      typeof body.assignments === "object" && body.assignments ? (body.assignments as Record<string, unknown>) : {};
-    const assignments = { ...existing, ...incoming };
-    const { error } = await supabase.from("app_settings").upsert(
-      {
-        key,
-        value: assignments,
-        updated_at: new Date().toISOString()
-      },
-      { onConflict: "key" }
-    );
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+
+    const restaurantAssignments = body.assignments?.restaurants ?? {};
+    const vipAssignments = body.assignments?.vip ?? {};
+
+    const { data: couriers, error: couriersError } = await supabase
+      .from("couriers")
+      .select("id")
+      .eq("is_active", true);
+    if (couriersError) {
+      return NextResponse.json({ ok: false, error: couriersError.message }, { status: 500 });
     }
+
+    const courierIds = (couriers ?? []).map((row) => row.id);
+    for (const courierId of courierIds) {
+      const assignedRestaurantIds = Object.entries(restaurantAssignments)
+        .filter(([, assignedCourierIds]) => assignedCourierIds.includes(courierId))
+        .map(([restaurantId]) => restaurantId);
+      const { error: updateError } = await supabase
+        .from("couriers")
+        .update({ assigned_restaurant_ids: assignedRestaurantIds })
+        .eq("id", courierId);
+      if (updateError) {
+        return NextResponse.json({ ok: false, error: updateError.message }, { status: 500 });
+      }
+    }
+
+    for (const [vipId, assignedCourierIds] of Object.entries(vipAssignments)) {
+      const { error: vipUpdateError } = await supabase
+        .from("vip_customers")
+        .update({ assigned_courier_ids: assignedCourierIds })
+        .eq("id", vipId);
+      if (vipUpdateError) {
+        return NextResponse.json({ ok: false, error: vipUpdateError.message }, { status: 500 });
+      }
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

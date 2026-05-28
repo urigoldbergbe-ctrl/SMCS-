@@ -172,6 +172,7 @@ alter table couriers enable row level security;
 alter table courier_locations enable row level security;
 alter table trips enable row level security;
 alter table audit_log enable row level security;
+alter table restaurants enable row level security;
 alter table dispatch_config enable row level security;
 alter table dispatch_config_history enable row level security;
 alter table support_tickets enable row level security;
@@ -196,6 +197,12 @@ create policy "append_only_audit_log" on audit_log
 
 drop policy if exists "admin_full_dispatch_config" on dispatch_config;
 create policy "admin_full_dispatch_config" on dispatch_config
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+drop policy if exists "admin_full_restaurants" on restaurants;
+create policy "admin_full_restaurants" on restaurants
   for all
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');

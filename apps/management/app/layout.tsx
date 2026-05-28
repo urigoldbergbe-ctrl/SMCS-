@@ -30,8 +30,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="he" dir="rtl">
       <body>
-        <UiPreferences />
-        <LanguageToggle />
         <div className="layout">
           <aside className="sidebar">
             <div className="brand">
@@ -39,7 +37,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </div>
             <SidebarNav items={navItems} />
           </aside>
-          <main className="main">{children}</main>
+          <main className="main">
+            <UiPreferences />
+            <div className="main-toolbar">
+              <LanguageToggle />
+            </div>
+            {children}
+          </main>
         </div>
       </body>
     </html>

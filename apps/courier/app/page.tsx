@@ -171,9 +171,11 @@ export default function CourierHomePage() {
 
   return (
     <main className="mobile">
-      <button className="lang-toggle-mobile" onClick={toggleDashboardLanguage} aria-label="Toggle courier language">
-        {language === "he" ? "EN" : "HE"}
-      </button>
+      <div className={`lang-toggle-row ${language === "he" ? "align-left" : "align-right"}`}>
+        <button className="lang-toggle-mobile" onClick={toggleDashboardLanguage} aria-label="Toggle courier language">
+          {language === "he" ? "EN" : "HE"}
+        </button>
+      </div>
       <section className="sticky-top card">
         <p className="delivery-code">{deliveryCode}</p>
         <h1 style={{ margin: "0 0 8px" }}>{customerName}</h1>

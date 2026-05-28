@@ -52,11 +52,14 @@ export default function LanguageToggle(): JSX.Element {
     localStorage.setItem(settingsKey, JSON.stringify(nextSettings));
     applyManagementUi(nextLanguage, appearance);
     setLanguage(nextLanguage);
+    window.dispatchEvent(new CustomEvent("management-language-changed", { detail: { language: nextLanguage } }));
   }
 
   return (
-    <button className="lang-toggle" onClick={toggleLanguage} aria-label="Toggle management language">
-      {language === "he" ? "EN" : "HE"}
-    </button>
+    <div className={`lang-toggle-shell ${language === "he" ? "align-left" : "align-right"}`}>
+      <button className="lang-toggle" onClick={toggleLanguage} aria-label="Toggle management language">
+        {language === "he" ? "EN" : "HE"}
+      </button>
+    </div>
   );
 }

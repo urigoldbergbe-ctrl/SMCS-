@@ -28,11 +28,20 @@ body {
   position: relative;
 }
 
+.lang-toggle-row {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.lang-toggle-row.align-left {
+  justify-content: flex-start;
+}
+
+.lang-toggle-row.align-right {
+  justify-content: flex-end;
+}
+
 .lang-toggle-mobile {
-  position: fixed;
-  top: 12px;
-  right: 16px;
-  z-index: 40;
   border-radius: 999px;
   border: 1px solid rgba(255, 128, 0, 0.45);
   background: #fff3e4;

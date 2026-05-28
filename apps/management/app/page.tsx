@@ -90,14 +90,23 @@ export default function DashboardPage() {
       setSnapshot(body);
     })();
 
-    const raw = localStorage.getItem("management_ui_settings");
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as { language?: Language };
-      setLanguage(parsed.language === "en" ? "en" : "he");
-    } catch {
-      // keep default
-    }
+    const applyFromStorage = (): void => {
+      const raw = localStorage.getItem("management_ui_settings");
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw) as { language?: Language };
+        setLanguage(parsed.language === "en" ? "en" : "he");
+      } catch {
+        // keep default
+      }
+    };
+
+    applyFromStorage();
+    const handleLanguageChange = () => applyFromStorage();
+    window.addEventListener("management-language-changed", handleLanguageChange);
+    return () => {
+      window.removeEventListener("management-language-changed", handleLanguageChange);
+    };
   }, []);
 
   return (

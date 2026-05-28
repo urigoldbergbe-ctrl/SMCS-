@@ -90,6 +90,10 @@ a {
   padding: 28px;
 }
 
+.main-toolbar {
+  margin-bottom: 12px;
+}
+
 .banner {
   border: 1px solid rgba(255, 128, 0, 0.3);
   background: #fff3e4;
@@ -204,10 +208,6 @@ label {
 }
 
 .lang-toggle {
-  position: fixed;
-  top: 14px;
-  right: 18px;
-  z-index: 200;
   border-radius: 999px;
   border: 1px solid rgba(255, 128, 0, 0.45);
   background: #fff3e4;
@@ -215,4 +215,17 @@ label {
   font-weight: 800;
   padding: 8px 12px;
   cursor: pointer;
+}
+
+.lang-toggle-shell {
+  display: flex;
+  width: 100%;
+}
+
+.lang-toggle-shell.align-left {
+  justify-content: flex-start;
+}
+
+.lang-toggle-shell.align-right {
+  justify-content: flex-end;
 }

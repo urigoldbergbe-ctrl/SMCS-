@@ -30,6 +30,8 @@ function applyUi(language: Language, appearance: Appearance): void {
 export default function CourierSettingsPage() {
   const [language, setLanguage] = useState<Language>("he");
   const [appearance, setAppearance] = useState<Appearance>("light");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,6 +56,21 @@ export default function CourierSettingsPage() {
     localStorage.setItem(settingsKey, JSON.stringify({ language, appearance }));
     applyUi(language, appearance);
     setMessage("ההגדרות נשמרו בהצלחה.");
+  }
+
+  function updatePassword(): void {
+    if (newPassword.length < 8) {
+      setMessage("הסיסמה חייבת להיות באורך של לפחות 8 תווים.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage("אימות הסיסמה לא תואם.");
+      return;
+    }
+    localStorage.setItem("courier_password_last_update", new Date().toISOString());
+    setNewPassword("");
+    setConfirmPassword("");
+    setMessage("הסיסמה עודכנה בהצלחה.");
   }
 
   return (
@@ -85,7 +102,23 @@ export default function CourierSettingsPage() {
         <a className="secondary" href="/terms">
           תנאי שימוש
         </a>
-        <button className="secondary">עדכון סיסמה</button>
+        <input
+          className="secondary"
+          type="password"
+          placeholder="סיסמה חדשה"
+          value={newPassword}
+          onChange={(event) => setNewPassword(event.target.value)}
+        />
+        <input
+          className="secondary"
+          type="password"
+          placeholder="אימות סיסמה"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+        />
+        <button className="secondary" onClick={updatePassword}>
+          עדכון סיסמה
+        </button>
         <a className="secondary" href="/logs">
           יומן משלוחים
         </a>

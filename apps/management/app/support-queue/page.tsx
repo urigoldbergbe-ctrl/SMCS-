@@ -1,9 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+interface Ticket {
+  id: string;
+  courierId: string;
+  issueCategory: string;
+  status: "open" | "ai_handling" | "escalated" | "resolved";
+  createdAt: string;
+}
 
 export default function SupportQueuePage() {
   const [status, setStatus] = useState("ממתין");
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+
+  async function loadTickets(): Promise<void> {
+    const response = await fetch("/api/support");
+    const body = (await response.json()) as { tickets?: Ticket[] };
+    setTickets(body.tickets ?? []);
+  }
+
+  useEffect(() => {
+    void loadTickets();
+  }, []);
 
   async function createDemoTicket(): Promise<void> {
     setStatus("יוצר...");
@@ -22,6 +41,22 @@ export default function SupportQueuePage() {
       })
     });
     setStatus(response.ok ? "הפנייה נוצרה" : "יצירת הפנייה נכשלה");
+    if (response.ok) await loadTickets();
+  }
+
+  async function resolveTicket(ticketId: string): Promise<void> {
+    setStatus("מעדכן סטטוס...");
+    const response = await fetch("/api/support", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticketId,
+        status: "resolved",
+        message: "Closed by operator"
+      })
+    });
+    setStatus(response.ok ? "הפנייה נסגרה" : "עדכון סטטוס נכשל");
+    if (response.ok) await loadTickets();
   }
 
   return (
@@ -32,6 +67,22 @@ export default function SupportQueuePage() {
           יצירת פנייה מוסלמת
         </button>
         <p>{status}</p>
+        <div className="alert-list">
+          {tickets.length === 0 ? <div className="alert-item">אין פניות פתוחות.</div> : null}
+          {tickets.map((ticket) => (
+            <div key={ticket.id} className="alert-item">
+              <div>
+                <strong>{ticket.issueCategory}</strong> | שליח: {ticket.courierId} | סטטוס: {ticket.status}
+              </div>
+              <div style={{ color: "var(--muted)" }}>{new Date(ticket.createdAt).toLocaleString()}</div>
+              {ticket.status !== "resolved" ? (
+                <button className="button" style={{ marginTop: "6px" }} onClick={() => resolveTicket(ticket.id)}>
+                  סגירת פנייה
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
       </article>
     </section>
   );

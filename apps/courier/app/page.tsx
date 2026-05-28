@@ -27,6 +27,8 @@ const textByLanguage: Record<
     supportChat: string;
     settings: string;
     offlineQueue: string;
+    mapMax: string;
+    mapNormal: string;
   }
 > = {
   he: {
@@ -46,7 +48,9 @@ const textByLanguage: Record<
     callCustomer: "התקשר ללקוח",
     supportChat: "צ׳אט עם התמיכה",
     settings: "הגדרות אפליקציה",
-    offlineQueue: "פעולות אופליין בתור"
+    offlineQueue: "פעולות אופליין בתור",
+    mapMax: "מצב מפה מלאה",
+    mapNormal: "חזרה לתצוגה מלאה"
   },
   en: {
     accept: "Accept Order",
@@ -65,7 +69,9 @@ const textByLanguage: Record<
     callCustomer: "Call Customer",
     supportChat: "Chat with Support",
     settings: "App Settings",
-    offlineQueue: "Offline queued actions"
+    offlineQueue: "Offline queued actions",
+    mapMax: "Max Map Mode",
+    mapNormal: "Exit Max Map"
   },
   ru: {
     accept: "Принять заказ",
@@ -84,7 +90,9 @@ const textByLanguage: Record<
     callCustomer: "Позвонить клиенту",
     supportChat: "Чат с поддержкой",
     settings: "Настройки приложения",
-    offlineQueue: "Действий офлайн в очереди"
+    offlineQueue: "Действий офлайн в очереди",
+    mapMax: "Режим полной карты",
+    mapNormal: "Выйти из режима карты"
   },
   ar: {
     accept: "قبول الطلب",
@@ -103,7 +111,9 @@ const textByLanguage: Record<
     callCustomer: "اتصل بالعميل",
     supportChat: "دردشة مع الدعم",
     settings: "إعدادات التطبيق",
-    offlineQueue: "إجراءات أوفلاين في الطابور"
+    offlineQueue: "إجراءات أوفلاين في الطابور",
+    mapMax: "وضع خريطة كاملة",
+    mapNormal: "عودة للوضع الكامل"
   }
 };
 
@@ -112,6 +122,7 @@ export default function CourierHomePage() {
   const [statusStep, setStatusStep] = useState<"accept" | "arrived" | "onway" | "delivered">("accept");
   const [language, setLanguage] = useState<Language>("he");
   const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [mapMaxMode, setMapMaxMode] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [eventMessages, setEventMessages] = useState<string[]>([]);
   const queuedCount = useMemo(() => getOfflineQueue().length, [status]);
@@ -225,117 +236,139 @@ export default function CourierHomePage() {
     setEventMessages((current) => [issue, ...current].slice(0, 5));
   }
 
+  function toggleMapMaxMode(): void {
+    setMapMaxMode((current) => {
+      const next = !current;
+      if (next) setSheetExpanded(false);
+      return next;
+    });
+  }
+
   return (
     <main className="courier-shell">
       <iframe title="Pickup and dropoff route map" src={mapEmbed} className="courier-map" loading="lazy" />
 
       <div className="courier-overlay">
         <div className={`lang-toggle-row ${language === "he" ? "align-left" : "align-right"}`}>
+          <button className="map-mode-toggle" onClick={toggleMapMaxMode} aria-label="Toggle max map mode">
+            {mapMaxMode ? t.mapNormal : t.mapMax}
+          </button>
           <button className="lang-toggle-mobile" onClick={toggleDashboardLanguage} aria-label="Toggle courier language">
             {language === "he" ? "EN" : "HE"}
           </button>
         </div>
 
-        <section className={`top-card ${sheetExpanded ? "top-card-expanded" : "top-card-compact"}`}>
-          <div className="online-chip">{shiftOnline ? t.shiftActive : t.shiftOff}</div>
-          <p className="delivery-code">{deliveryCode}</p>
-          <h1 className="customer-name">{customerName}</h1>
-          <div className="eta-chip">{etaByStep[statusStep]}</div>
-          <div className="status-row">
-            <button className={`status-btn ${statusStep === "accept" ? "active" : ""}`} onClick={() => updateStatus("accept")}>
-              {t.accept}
-            </button>
-            <button className={`status-btn ${statusStep === "arrived" ? "active" : ""}`} onClick={() => updateStatus("arrived")}>
-              {t.arrived}
-            </button>
-            <button className={`status-btn ${statusStep === "onway" ? "active" : ""}`} onClick={() => updateStatus("onway")}>
-              {t.onWay}
-            </button>
-            <button className={`status-btn ${statusStep === "delivered" ? "active" : ""}`} onClick={() => updateStatus("delivered")}>
-              {t.delivered}
-            </button>
-          </div>
-        </section>
+        {!mapMaxMode ? (
+          <section className={`top-card ${sheetExpanded ? "top-card-expanded" : "top-card-compact"}`}>
+            <div className="online-chip">{shiftOnline ? t.shiftActive : t.shiftOff}</div>
+            <p className="delivery-code">{deliveryCode}</p>
+            <h1 className="customer-name">{customerName}</h1>
+            <div className="eta-chip">{etaByStep[statusStep]}</div>
+            <div className="status-row">
+              <button className={`status-btn ${statusStep === "accept" ? "active" : ""}`} onClick={() => updateStatus("accept")}>
+                {t.accept}
+              </button>
+              <button className={`status-btn ${statusStep === "arrived" ? "active" : ""}`} onClick={() => updateStatus("arrived")}>
+                {t.arrived}
+              </button>
+              <button className={`status-btn ${statusStep === "onway" ? "active" : ""}`} onClick={() => updateStatus("onway")}>
+                {t.onWay}
+              </button>
+              <button className={`status-btn ${statusStep === "delivered" ? "active" : ""}`} onClick={() => updateStatus("delivered")}>
+                {t.delivered}
+              </button>
+            </div>
+          </section>
+        ) : null}
       </div>
 
-      <section className={`bottom-sheet ${sheetExpanded ? "expanded" : "collapsed"}`}>
-        <button className="sheet-handle" onClick={() => setSheetExpanded((current) => !current)} aria-label="Toggle details sheet">
+      <section className={`bottom-sheet ${sheetExpanded ? "expanded" : "collapsed"} ${mapMaxMode ? "map-max" : ""}`}>
+        <button
+          className="sheet-handle"
+          onClick={() => setSheetExpanded((current) => !current)}
+          aria-label="Toggle details sheet"
+          disabled={mapMaxMode}
+        >
           <span />
         </button>
-        <button className="primary" onClick={startShift}>
-          {shiftOnline ? t.onShift : t.startShift}
-        </button>
+        <div className="sheet-content">
+          <button className="primary" onClick={startShift}>
+            {shiftOnline ? t.onShift : t.startShift}
+          </button>
 
-        <a className="nav-cta" href={wazeUrl} target="_blank" rel="noreferrer">
-          {t.navigate}
-        </a>
-
-        <div className="trip-info">
-          <div className="trip-row">
-            <span className="dot pickup-dot" />
-            <div>
-              <div className="trip-label">{t.pickup}</div>
-              <div className="trip-value">{pickupAddress}</div>
-            </div>
-          </div>
-          <div className="trip-row">
-            <span className="dot dropoff-dot" />
-            <div>
-              <div className="trip-label">{t.dropoff}</div>
-              <div className="trip-value">{dropoffAddress}</div>
-            </div>
-          </div>
-          <div className="trip-row">
-            <span className="dot next-dot" />
-            <div>
-              <div className="trip-label">{t.nextJob}</div>
-              <div className="trip-value">{nextJob}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="quick-actions">
-          <a className="secondary" href="tel:+972501234567">
-            {t.callCustomer}
+          <a className="nav-cta" href={wazeUrl} target="_blank" rel="noreferrer">
+            {t.navigate}
           </a>
-          <button className="secondary" onClick={reportProblem}>
-            {t.supportChat}
-          </button>
-          <a className="secondary" href="/settings">
-            {t.settings}
-          </a>
-          <button
-            className="secondary"
-            onClick={() =>
-              enqueueOperationalIssue(language === "he" ? "לקוח לא עונה - נדרש עדכון דיספאץ׳" : "Customer not answering - dispatch update needed")
-            }
-          >
-            {language === "he" ? "לקוח לא עונה" : "Customer Not Answering"}
-          </button>
-          <button
-            className="secondary"
-            onClick={() =>
-              enqueueOperationalIssue(language === "he" ? "בעיה באיסוף מהמסעדה" : "Pickup issue at restaurant")
-            }
-          >
-            {language === "he" ? "בעיה באיסוף" : "Pickup Issue"}
-          </button>
-        </div>
 
-        <p className="muted queue-text">
-          {t.offlineQueue}: {queuedCount}
-        </p>
-        <p className="muted queue-text">{statusMessageByStep[statusStep]}</p>
-        {eventMessages.length > 0 ? (
-          <div className="event-list">
-            {eventMessages.map((message) => (
-              <div key={message} className="event-item">
-                {message}
+          <div className="trip-info">
+            <div className="trip-row">
+              <span className="dot pickup-dot" />
+              <div>
+                <div className="trip-label">{t.pickup}</div>
+                <div className="trip-value">{pickupAddress}</div>
               </div>
-            ))}
+            </div>
+            <div className="trip-row">
+              <span className="dot dropoff-dot" />
+              <div>
+                <div className="trip-label">{t.dropoff}</div>
+                <div className="trip-value">{dropoffAddress}</div>
+              </div>
+            </div>
+            <div className="trip-row">
+              <span className="dot next-dot" />
+              <div>
+                <div className="trip-label">{t.nextJob}</div>
+                <div className="trip-value">{nextJob}</div>
+              </div>
+            </div>
           </div>
-        ) : null}
-        {status ? <p className="muted queue-text">{status}</p> : null}
+
+          <div className="quick-actions">
+            <a className="secondary" href="tel:+972501234567">
+              {t.callCustomer}
+            </a>
+            <button className="secondary" onClick={reportProblem}>
+              {t.supportChat}
+            </button>
+            <a className="secondary" href="/settings">
+              {t.settings}
+            </a>
+            <button
+              className="secondary"
+              onClick={() =>
+                enqueueOperationalIssue(
+                  language === "he" ? "לקוח לא עונה - נדרש עדכון דיספאץ׳" : "Customer not answering - dispatch update needed"
+                )
+              }
+            >
+              {language === "he" ? "לקוח לא עונה" : "Customer Not Answering"}
+            </button>
+            <button
+              className="secondary"
+              onClick={() =>
+                enqueueOperationalIssue(language === "he" ? "בעיה באיסוף מהמסעדה" : "Pickup issue at restaurant")
+              }
+            >
+              {language === "he" ? "בעיה באיסוף" : "Pickup Issue"}
+            </button>
+          </div>
+
+          <p className="muted queue-text">
+            {t.offlineQueue}: {queuedCount}
+          </p>
+          <p className="muted queue-text">{statusMessageByStep[statusStep]}</p>
+          {eventMessages.length > 0 ? (
+            <div className="event-list">
+              {eventMessages.map((message) => (
+                <div key={message} className="event-item">
+                  {message}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {status ? <p className="muted queue-text">{status}</p> : null}
+        </div>
       </section>
     </main>
   );
